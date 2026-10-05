@@ -26,10 +26,12 @@ import { llmBaseURLForAPIMode, llmProviderDefinition, llmProviders } from '../li
 import { AppUpdatePanel } from './AppUpdatePanel';
 import { AgentSettingsPanel } from './AgentSettingsPanel';
 import { SettingsSection } from './SettingsSection';
+import { NotificationSettingsPanel } from './NotificationSettingsPanel';
 
 type Props = {
 	config: BackendConfig | null;
 	open: boolean;
+	initialSection?: 'updates';
 	onClose: () => void;
 	onSaved?: () => void;
 };
@@ -51,7 +53,7 @@ const emptySecrets = (): Record<SecretKey, string> => ({
 	wechat_api_token: '',
 });
 
-export function SettingsDrawer({ config, open, onClose, onSaved }: Props) {
+export function SettingsDrawer({ config, open, initialSection, onClose, onSaved }: Props) {
 	const [settings, setSettings] = useState<AppSettings | null>(null);
 	const [agentRuntime, setAgentRuntime] = useState('hermes');
 	const [llmProfiles, setLLMProfiles] = useState<LLMProfile[]>([]);
@@ -84,6 +86,22 @@ export function SettingsDrawer({ config, open, onClose, onSaved }: Props) {
 	const [runtimeLogStatus, setRuntimeLogStatus] = useState<RuntimeLogStatus | null>(null);
 	const [openingRuntimeLogs, setOpeningRuntimeLogs] = useState(false);
 	const modelFetchSequence = useRef(0);
+	const updateSectionRef = useRef<HTMLDivElement>(null);
+	const updateSectionFocused = useRef(false);
+
+	useEffect(() => {
+		if (!open || initialSection !== 'updates' || state === 'loading') {
+			updateSectionFocused.current = false;
+			return;
+		}
+		if (updateSectionFocused.current) return;
+		const section = updateSectionRef.current?.querySelector('details');
+		if (!section) return;
+		section.open = true;
+		section.scrollIntoView({ block: 'start' });
+		section.querySelector('summary')?.focus({ preventScroll: true });
+		updateSectionFocused.current = true;
+	}, [open, initialSection, state]);
 
 	useEffect(() => {
 		if (!open) return;
@@ -490,7 +508,7 @@ export function SettingsDrawer({ config, open, onClose, onSaved }: Props) {
 		<div className="settings-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
 			<aside className="settings-drawer" role="dialog" aria-modal="true" aria-label="系统设置">
 				<header className="settings-header">
-					<div><span>AI RUNTIME</span><h2>系统设置</h2><p>管理运行引擎、共享模型与外部数据源凭据</p></div>
+					<div><span>AI RUNTIME</span><h2>系统设置</h2><p>管理运行引擎、共享模型、数据源与消息通知</p></div>
 					<button type="button" onClick={onClose} aria-label="关闭设置"><X size={20} /></button>
 				</header>
 
@@ -560,7 +578,9 @@ export function SettingsDrawer({ config, open, onClose, onSaved }: Props) {
 							<SecretField label="东方财富 Cookie" secretKey="eastmoney_cookie" status={settings?.credentials.eastmoney_cookie} value={secrets.eastmoney_cookie} clearing={clearSecrets.has('eastmoney_cookie')} onChange={updateSecret} onClear={toggleClear} hint="当前公共行情不需要，预留登录态接口" />
 						</SettingsSection>
 
-						<AppUpdatePanel />
+						<NotificationSettingsPanel config={config} />
+
+						<div ref={updateSectionRef}><AppUpdatePanel /></div>
 
 						<SettingsSection className="runtime-log-section" title="运行日志" description="遇到问题时，可将此目录中的日志文件提供给开发者排查。" icon={<FolderOpen size={18} />}>
 							<div className="runtime-log-summary">

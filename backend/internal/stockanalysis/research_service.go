@@ -15,6 +15,7 @@ type ResearchPublisher func(string, string, *Analysis, *ResearchSnapshot) error
 type ResearchRunner func(context.Context, ResearchRequest, ResearchPublisher) (Analysis, *ResearchSnapshot, error)
 type activeResearch struct {
 	id     string
+	symbol string
 	cancel context.CancelFunc
 }
 
@@ -27,10 +28,14 @@ type ResearchService struct {
 	wg                  sync.WaitGroup
 	closed              bool
 	initializationError error
+	onComplete          func(ResearchJob)
 }
 
-func NewResearchService(store *ResearchStore, run ResearchRunner) *ResearchService {
+func NewResearchService(store *ResearchStore, run ResearchRunner, onComplete ...func(ResearchJob)) *ResearchService {
 	s := &ResearchService{store: store, run: run, active: map[string]activeResearch{}, workers: make(chan struct{}, 2)}
+	if len(onComplete) > 0 {
+		s.onComplete = onComplete[0]
+	}
 	if store != nil {
 		s.initializationError = store.MarkInterrupted(context.Background())
 	}
@@ -63,10 +68,14 @@ func (s *ResearchService) start(ctx context.Context, request ResearchRequest, re
 	if s == nil || s.store == nil || s.run == nil {
 		return ResearchJob{}, fmt.Errorf("研究任务服务不可用")
 	}
-	keyBytes, _ := json.Marshal(request)
-	key := string(keyBytes)
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.startLocked(ctx, request, resume)
+}
+
+func (s *ResearchService) startLocked(ctx context.Context, request ResearchRequest, resume *ResearchJob) (ResearchJob, error) {
+	keyBytes, _ := json.Marshal(request)
+	key := string(keyBytes)
 	if s.initializationError != nil {
 		return ResearchJob{}, s.initializationError
 	}
@@ -74,7 +83,11 @@ func (s *ResearchService) start(ctx context.Context, request ResearchRequest, re
 		return ResearchJob{}, fmt.Errorf("研究服务正在关闭")
 	}
 	if active, ok := s.active[key]; ok {
-		return s.store.Get(ctx, active.id)
+		job, err := s.store.Get(ctx, active.id)
+		if err != nil || job.Status == "queued" || job.Status == "running" {
+			return job, err
+		}
+		delete(s.active, key)
 	}
 	if len(s.active) >= 8 {
 		return ResearchJob{}, ErrResearchBusy
@@ -90,7 +103,7 @@ func (s *ResearchService) start(ctx context.Context, request ResearchRequest, re
 		return job, err
 	}
 	runCtx, cancel := context.WithTimeout(context.Background(), ResearchTotalTimeout(request))
-	s.active[key] = activeResearch{id: job.ID, cancel: cancel}
+	s.active[key] = activeResearch{id: job.ID, symbol: request.Symbol, cancel: cancel}
 	s.wg.Add(1)
 	go s.execute(runCtx, key, job)
 	return job, nil
@@ -100,7 +113,7 @@ func (s *ResearchService) execute(ctx context.Context, key string, job ResearchJ
 	defer s.wg.Done()
 	defer func() {
 		s.mu.Lock()
-		if item, ok := s.active[key]; ok {
+		if item, ok := s.active[key]; ok && item.id == job.ID {
 			item.cancel()
 			delete(s.active, key)
 		}
@@ -199,6 +212,8 @@ func (s *ResearchService) execute(ctx context.Context, key string, job ResearchJ
 		s.mu.Lock()
 		s.initializationError = fmt.Errorf("保存研究结果失败：%w", saveErr)
 		s.mu.Unlock()
+	} else if s.onComplete != nil {
+		s.onComplete(job)
 	}
 }
 
