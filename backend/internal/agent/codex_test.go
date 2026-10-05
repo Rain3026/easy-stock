@@ -314,6 +314,8 @@ func TestCodexNativeSharedSkillsAndMCP(t *testing.T) {
 				nativeReply(w, nativeMessage())
 			}))
 			defer server.Close()
+			// SSE responses remain open until the fixture client disconnects.
+			defer server.CloseClientConnections()
 			h := NewHermesRuntime(HermesConfig{Home: t.TempDir(), PythonPath: python})
 			key := "fake-local-key"
 			if err := h.SyncLLM(appsettings.LLM{Provider: "custom", BaseURL: server.URL + "/v1", Model: "gpt-5.5", APIMode: "responses"}, &key); err != nil {

@@ -1,3 +1,4 @@
+import { ChartSvg } from './ChartSvg';
 import { KLine } from '../lib/backend';
 import { type MouseEvent, useState } from 'react';
 
@@ -145,7 +146,7 @@ export function KLineChart({ lines, symbol, state = 'ready', mode = 'daily', per
 
 	return (
 		<div className={`kline-chart-wrap ${mode === 'intraday' ? 'intraday-chart' : 'daily-chart'}`}>
-			<svg className="kline-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${periodLabel}价格、涨跌幅和成交量图`}>
+			<ChartSvg className="kline-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`${periodLabel}价格、涨跌幅和成交量图`}>
 				{percentTicks.map((tick) => {
 					const y = percentY(tick);
 					const price = referencePrice * (1 + tick / 100);
@@ -190,7 +191,7 @@ export function KLineChart({ lines, symbol, state = 'ready', mode = 'daily', per
 					<circle className="kline-crosshair-point" cx={hoveredX} cy={hoveredY} r="4" />
 				</>}
 				<rect className="kline-hover-layer" x={left} y={chartTop} width={plotWidth} height={volumeBottom - chartTop} onMouseMove={handleChartMove} onMouseLeave={() => setHoveredIndex(null)} aria-label="悬浮查看行情明细" />
-			</svg>
+			</ChartSvg>
 			{hoveredLine && <div className={`kline-hover-card ${mode === 'intraday' ? 'right' : 'left'}`}>
 				<strong>{mode === 'intraday' ? formatLongDate(hoveredLine.time) : formatTime(hoveredLine.time, mode, periodLabel)}</strong>
 				<div><span>开盘</span><b>{hoveredLine.open.toFixed(2)}</b></div>

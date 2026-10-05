@@ -1,3 +1,4 @@
+import { ChartSvg } from './ChartSvg';
 import { ReasoningControl } from './ReasoningControl';
 import {
 	Activity,
@@ -1352,14 +1353,14 @@ function TrendChart({ points, newListing = false }: { points: StockAITrendPoint[
 	if (!geometry) return <div className="stock-ai-chart-empty">趋势数据不足</div>;
 	return (
 		<div className="stock-ai-chart-wrap">
-			<svg viewBox="0 0 760 260" role="img" aria-label={newListing ? '个股上市期价格图' : '个股近120日趋势图'}>
+			<ChartSvg viewBox="0 0 760 260" role="img" aria-label={newListing ? '个股上市期价格图' : '个股近120日趋势图'}>
 				{[0, 1, 2, 3].map((row) => <line x1="42" x2="744" y1={30 + row * 58} y2={30 + row * 58} key={row} />)}
 				{!newListing && <><polyline className="ma120" points={geometry.ma120} /><polyline className="ma60" points={geometry.ma60} /><polyline className="ma20" points={geometry.ma20} /></>}
 				<polyline className="close" points={geometry.close} />
 				{points.length === 1 && <circle className="close-point" cx={geometry.lastX} cy={geometry.lastY} r="4" />}
 				<text x="5" y="34">{geometry.max.toFixed(2)}</text>
 				<text x="5" y="208">{geometry.min.toFixed(2)}</text>
-			</svg>
+			</ChartSvg>
 			<div className="stock-ai-chart-legend"><span className="close">收盘</span>{!newListing && <><span className="ma20">MA20</span><span className="ma60">MA60</span><span className="ma120">MA120</span></>}<em>{points[0]?.date} — {points.at(-1)?.date}</em></div>
 		</div>
 	);

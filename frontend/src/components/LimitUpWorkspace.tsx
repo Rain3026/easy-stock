@@ -1,3 +1,4 @@
+import { ChartSvg } from './ChartSvg';
 import {
 	Activity,
 	BadgeCent,
@@ -388,7 +389,7 @@ function EmotionLineChart({ points }: { points: MarketEmotionPoint[] }) {
 	const labels = points.length <= 7 ? points.map((_, index) => index) : [0, Math.floor((points.length - 1) / 2), points.length - 1];
 	return (
 		<div className="emotion-chart-wrap">
-			<svg className="emotion-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`最近${points.length}个交易日市场情绪分折线图`}>
+			<ChartSvg className="emotion-line-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`最近${points.length}个交易日市场情绪分折线图`}>
 				<defs>
 					<linearGradient id="emotionAreaFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--blue)" stopOpacity="0.24" /><stop offset="1" stopColor="var(--blue)" stopOpacity="0.02" /></linearGradient>
 				</defs>
@@ -402,7 +403,7 @@ function EmotionLineChart({ points }: { points: MarketEmotionPoint[] }) {
 					</g>
 				))}
 				{labels.map((index) => <text className="emotion-date-label" x={x(index)} y={height - 8} textAnchor={index === 0 ? 'start' : index === points.length - 1 ? 'end' : 'middle'} key={points[index].trade_date}>{shortTradeDate(points[index].trade_date)}</text>)}
-			</svg>
+			</ChartSvg>
 		</div>
 	);
 }

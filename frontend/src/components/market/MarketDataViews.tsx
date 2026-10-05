@@ -1,3 +1,4 @@
+import { ChartSvg } from '../ChartSvg';
 import {
 	Activity,
 	AlertTriangle,
@@ -267,7 +268,7 @@ function MarginBalanceChart({ items }: { items: MarketMarginPoint[] }) {
 		setHoveredIndex(Math.round(ratio * (points.length - 1)));
 	};
 	return <div className="market-margin-chart-wrap">
-		<svg className="market-margin-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="融资融券余额折线图">
+		<ChartSvg className="market-margin-chart" viewBox={`0 0 ${width} ${height}`} role="img" aria-label="融资融券余额折线图">
 			<defs><linearGradient id="marginBalanceArea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="var(--blue)" stopOpacity=".18" /><stop offset="1" stopColor="var(--blue)" stopOpacity=".01" /></linearGradient></defs>
 			{Array.from({ length: 5 }, (_, index) => {
 				const ratio = index / 4;
@@ -283,7 +284,7 @@ function MarginBalanceChart({ items }: { items: MarketMarginPoint[] }) {
 			{labelIndexes.map((index) => <text className="market-margin-date" x={x(index)} y={height - 25} textAnchor={index === 0 ? 'start' : index === points.length - 1 ? 'end' : 'middle'} key={points[index].trade_date}>{formatMonthDay(points[index].trade_date)}</text>)}
 			{hovered && hoveredIndex != null && hoveredX != null && <g className="market-margin-crosshair"><line x1={hoveredX} x2={hoveredX} y1={top} y2={bottom} /><circle className="total" cx={hoveredX} cy={mainY(hovered.margin_balance)} r="4" /><circle className="financing" cx={hoveredX} cy={mainY(hovered.financing_balance)} r="4" /><circle className="lending" cx={hoveredX} cy={lendingY(hovered.securities_lending_balance)} r="4" /></g>}
 			<rect className="market-margin-hover-layer" x={left} y={top} width={plotWidth} height={plotHeight} onMouseMove={handleMove} onMouseLeave={() => setHoveredIndex(null)} />
-		</svg>
+		</ChartSvg>
 		{hovered && hoveredIndex != null && <div className={`market-margin-tooltip ${hoveredIndex > points.length / 2 ? 'left' : 'right'}`}>
 			<strong>{hovered.trade_date}</strong>
 			<div><span>两融余额</span><b>{formatHundredMillion(hovered.margin_balance)}</b></div>

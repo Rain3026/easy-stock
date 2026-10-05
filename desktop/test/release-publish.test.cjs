@@ -98,7 +98,7 @@ else cp "$CHECK_ROOT/assets/$name" "$output"; fi
   const success = publish();
   assert.equal(success.status, 0, success.stderr);
   const log = fs.readFileSync(path.join(root, 'log'), 'utf8').trim().split('\n');
-  assert.equal(log.filter((line) => line === 'upload:mac.zip').length, 2);
+  assert.equal(log.filter((line) => line === 'upload:mac.zip').length, 2, `${success.stdout}\n${success.stderr}\n${log.join('\n')}`);
   assert.ok(log.indexOf('upload:latest-mac.yml') > log.indexOf('verify:win.exe.blockmap'));
   fs.writeFileSync(path.join(root, 'log'), '');
   const failure = publish({ CORRUPT_SIZE: '1' });

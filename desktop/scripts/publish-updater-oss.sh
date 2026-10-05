@@ -53,7 +53,8 @@ upload() {
   fi
   for attempt in 1 2 3; do
     echo "Uploading $name (attempt $attempt/3)"
-    if "${upload_timeout[@]}" "$ossutil_command" "${ossutil_options[@]}" cp "$file" "${target_uri%/}/$name" \
+    # Bash 3.2 (macOS) treats an empty array as unset under nounset.
+    if ${upload_timeout[@]+"${upload_timeout[@]}"} "$ossutil_command" "${ossutil_options[@]}" cp "$file" "${target_uri%/}/$name" \
       --force --no-progress --parallel "${OSS_UPLOAD_PARALLEL:-16}" --part-size 4Mi --checkpoint-dir "$verification_root/checkpoints" --cache-control "$cache_control"; then
       return 0
     fi

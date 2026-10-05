@@ -1,3 +1,4 @@
+import { ChartSvg } from './components/ChartSvg';
 import {
 	Activity,
 	BarChart3,
@@ -821,7 +822,7 @@ function CandlestickChart({ lines, state }: { lines: KLine[]; state: LoadState }
 	const chartBottom = 200;
 	const volumeTop = 220;
 	const volumeBottom = 258;
-	const labelWidth = 52;
+	const labelWidth = 128;
 	const plotWidth = width - labelWidth;
 	const minPrice = Math.min(...sorted.map((line) => line.low));
 	const maxPrice = Math.max(...sorted.map((line) => line.high));
@@ -836,7 +837,7 @@ function CandlestickChart({ lines, state }: { lines: KLine[]; state: LoadState }
 
 	return (
 		<div className="candlestick-wrap">
-			<svg className="candlestick" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`最近 ${sorted.length} 个交易日的日 K 线和成交量`}>
+			<ChartSvg className="candlestick" viewBox={`0 0 ${width} ${height}`} role="img" aria-label={`最近 ${sorted.length} 个交易日的日 K 线和成交量`}>
 				{priceTicks.map((tick) => {
 					const y = priceY(tick);
 					return <g key={tick}><line className="chart-grid" x1="0" x2={plotWidth} y1={y} y2={y} /><text className="chart-label" x={width - 4} y={y + 4} textAnchor="end">{tick.toFixed(2)}</text></g>;
@@ -858,7 +859,7 @@ function CandlestickChart({ lines, state }: { lines: KLine[]; state: LoadState }
 					const line = sorted[index];
 					return <text className="chart-label" x={index * step + step / 2} y={height - 4} textAnchor={index === 0 ? 'start' : index === sorted.length - 1 ? 'end' : 'middle'} key={line.time}>{formatDate(line.time)}</text>;
 				})}
-			</svg>
+			</ChartSvg>
 		</div>
 	);
 }

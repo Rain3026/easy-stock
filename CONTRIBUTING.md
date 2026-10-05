@@ -2,7 +2,7 @@
 
 ## 开发版本规则
 
-默认所有需求都在开源版开发。开源版远程是 `upstream`（`jundizhou/easy-stock`），默认提交到 `codex/<topic>` 分支并推送到该远程。
+默认所有需求都在开源版开发。本 fork 的个性化改动默认提交到本地 `oss-main`；用户要求同步或推送时，推送到 `fork`（`Rain3026/easy-stock`）的 `main`。原作者仓库保留为 `upstream`（`jundizhou/easy-stock`），用于获取更新。需要向原作者贡献或创建 Pull Request 时，再使用 `codex/<topic>` 分支。
 
 只有用户明确指定商业版、商业仓库或 `origin` 时，才使用商业版工作树和 `origin` 远程。商业版工作树、远程边界和推送前检查见仓库根目录的 [AGENTS.md](./AGENTS.md)。
 
