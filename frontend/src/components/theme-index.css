@@ -1,9 +1,10 @@
 .theme-index-panel { grid-column: 1 / -1; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 18px 20px; min-width: 0; }
-.theme-index-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; }
+.theme-index-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+.theme-index-heading > div:first-child { flex: 1 1 160px; min-width: 0; }
 .theme-index-heading > div > span { font-size: var(--font-size-min); color: var(--muted); }
 .theme-index-heading h3 { margin: 4px 0; font-size: 19px; }
 .theme-index-heading small { color: var(--muted); font-size: var(--font-size-min); }
-.theme-index-controls { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: flex-end; }
+.theme-index-controls { display: flex; flex: 1 1 240px; align-items: center; gap: 16px; flex-wrap: wrap; justify-content: space-between; }
 .theme-index-controls [role="group"] { display: flex; gap: 4px; }
 .theme-index-controls button { border: 1px solid var(--line); border-radius: 7px; padding: 6px 10px; background: var(--surface); color: var(--muted); cursor: pointer; white-space: nowrap; }
 .theme-index-controls button.active { color: var(--blue); border-color: var(--blue); background: var(--surface-3); }
@@ -13,4 +14,4 @@
 .theme-index-panel .kline-chart { min-width: 0; }
 .theme-index-panel .kline-chart-legend { flex-wrap: wrap; justify-content: center; padding: 0; font-size: var(--font-size-min); }
 .theme-index-panel .kline-chart-placeholder { min-height: 240px; margin: 12px 0; }
-@media (max-width: 768px) { .theme-index-panel { padding: 14px 12px; } .theme-index-heading { flex-direction: column; } .theme-index-controls { width: 100%; justify-content: space-between; } }
+@media (max-width: 768px) { .theme-index-panel { padding: 14px 12px; } .theme-index-heading { flex-direction: column; } .theme-index-heading > div:first-child, .theme-index-controls { flex: initial; } .theme-index-controls { width: 100%; justify-content: space-between; } }

@@ -66,8 +66,9 @@ export function KLineChart({ lines, symbol, state = 'ready', mode = 'daily', per
 	const sorted = [...lines].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
 	const width = compact ? 540 : 960;
 	const height = compact ? 350 : 430;
-	const left = compact ? 58 : 68;
-	const right = compact ? 68 : 84;
+	// Compact theme cards retain 14px labels even when the viewBox shrinks.
+	const left = compact ? 140 : 68;
+	const right = compact ? 160 : 84;
 	const chartTop = 20;
 	const chartBottom = height - 114;
 	const volumeTop = height - 92;
@@ -96,7 +97,8 @@ export function KLineChart({ lines, symbol, state = 'ready', mode = 'daily', per
 	const priceY = (value: number) => percentY(percentChange(value));
 	const volumeY = (value: number) => volumeBottom - (value / maxVolume) * (volumeBottom - volumeTop);
 	const percentTicks = Array.from({ length: 7 }, (_, index) => percentRange - (percentRange * 2 * index) / 6);
-	const labelIndexes = sorted.length <= 5 ? sorted.map((_, index) => index) : [0, Math.floor((sorted.length - 1) / 2), sorted.length - 1];
+	const labelIndexes = compact && sorted.length > 1 ? [0, sorted.length - 1]
+		: sorted.length <= 5 ? sorted.map((_, index) => index) : [0, Math.floor((sorted.length - 1) / 2), sorted.length - 1];
 	const dayKey = (value: string) => value.slice(0, 10);
 	const intradayBaselines: Array<number | null> = [];
 	let currentDay = '';
