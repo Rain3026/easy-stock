@@ -77,6 +77,7 @@ import { useLimitUpWorkspace } from './lib/use-limit-up-workspace';
 import { useThemeOverview } from './lib/use-theme-overview';
 import { useThemeConstituents, sameTheme } from './lib/use-theme-constituents';
 import { useThemeKLines } from './lib/use-theme-klines';
+import { ThemeIndexPanel } from './components/ThemeIndexPanel';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type WorkspaceMode = 'themes' | 'limit-up' | 'mastery' | 'reviews' | 'stock-ai' | 'portfolio-inspection' | 'ai' | 'market' | 'token-usage';
@@ -652,6 +653,8 @@ export function App() {
 							? <StockSnapshot stock={selectedStock} />
 							: <MetricLoadingPanel failed={selectedHistoryFailed} />)}
 					</section>
+
+					<ThemeIndexPanel config={config} theme={activeOverview} refreshKey={themeRefreshKey} />
 
 					<section className="detail-panel identity-panel">
 						<div className="panel-label"><Target size={16} aria-hidden="true" />龙头身份模型</div>
