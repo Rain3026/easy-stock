@@ -9,7 +9,7 @@ import (
 
 const (
 	MaxHoldings        = 10
-	PromptVersion      = "portfolio-inspection-v4"
+	PromptVersion      = "portfolio-inspection-v6"
 	AlgorithmVersion   = "portfolio-ai-score-v4"
 	MinimumAICoverage  = 70
 	DefaultConcurrency = 2
@@ -43,6 +43,8 @@ type Holding struct {
 }
 
 type Request struct {
+	PortfolioPlanID      string                      `json:"portfolio_plan_id,omitempty"`
+	PortfolioPlanName    string                      `json:"portfolio_plan_name,omitempty"`
 	SourceOptimizationID string                      `json:"source_optimization_id,omitempty"`
 	TraderProfile        TraderProfile               `json:"trader_profile"`
 	Holdings             []Holding                   `json:"holdings"`
@@ -170,6 +172,8 @@ type Report struct {
 }
 
 type Job struct {
+	ScheduleID            string          `json:"schedule_id,omitempty"`
+	NotificationChannels  []string        `json:"notification_channels,omitempty"`
 	ID                    string          `json:"id"`
 	Status                string          `json:"status"`
 	Stage                 string          `json:"stage"`

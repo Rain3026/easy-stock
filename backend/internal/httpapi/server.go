@@ -73,6 +73,7 @@ type Server struct {
 	reviewStore              *review.Store
 	portfolioStore           *portfolioinspection.Store
 	portfolioInspection      *portfolioinspection.Service
+	portfolioScheduler       *portfolioinspection.Scheduler
 	portfolioOptimization    *portfoliooptimization.Service
 	portfolioExpectation     *portfolioinspection.ExpectationService
 	stockResearchStore       *stockanalysis.ResearchStore
@@ -83,6 +84,7 @@ type Server struct {
 	notificationSender       notificationSender
 	notifications            *notification.Dispatcher
 	reviewAutomation         *review.Automation
+	reviewScheduler          *review.DailyScheduler
 	remoteDailySync          *review.RemoteDailySync
 	agentGateway             agent.Gateway
 	usageGateway             agent.Gateway
@@ -391,6 +393,12 @@ func NewServer(config any) *Server {
 	s.portfolioInspection = portfolioinspection.NewService(cfg.PortfolioStore, usageGateway, s.analyzeStock, cfg.Logger, s.analyzeHoldingResearch)
 	s.portfolioInspection.ConfigureCompletion(s.notifyPortfolioInspection)
 	s.portfolioInspection.ConfigureResearch(s.resolvePortfolioResearch, s.refreshPortfolioQuotes)
+	s.portfolioScheduler = portfolioinspection.NewScheduler(cfg.PortfolioStore, s.portfolioInspection)
+	if cfg.ReviewCalendar == nil {
+		cfg.ReviewCalendar = review.NewExchangeCalendar(cfg.ReviewStore, cfg.ReviewHTTP)
+	}
+	s.reviewScheduler = review.NewDailyScheduler(cfg.ReviewStore, s.reviewAutomation, cfg.ReviewCalendar)
+	s.reviewAutomation.SetDailySummaryCompleted(s.notifyDailySummary)
 	s.portfolioOptimization = portfoliooptimization.NewService(cfg.PortfolioStore, usageGateway, portfoliooptimization.Dependencies{Collect: s.collectOptimizationUniverse, Research: s.resolvePortfolioResearch, Quotes: s.refreshOptimizationQuotes})
 	s.portfolioExpectation = portfolioinspection.NewExpectationService(cfg.PortfolioStore, cfg.ReviewStore, usageGateway, s.analyzeStock, cfg.Logger, s.analyzeHoldingResearch)
 	s.themeIndex = cfg.ThemeIndex
@@ -434,6 +442,12 @@ func (s *Server) Close() error {
 	}
 	if s.emotionProgress != nil {
 		s.emotionProgress.close()
+	}
+	if s.reviewScheduler != nil {
+		s.reviewScheduler.Close()
+	}
+	if s.portfolioScheduler != nil {
+		s.portfolioScheduler.Close()
 	}
 	var closeErrors []error
 	if s.notifications != nil {
@@ -598,10 +612,14 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/portfolio-optimizations/{id}", s.portfolioOptimizationGet)
 	s.mux.HandleFunc("POST /api/v1/portfolio-optimizations/{id}/cancel", s.portfolioOptimizationCancel)
 	s.mux.HandleFunc("POST /api/v1/portfolio-optimizations/{id}/resume", s.portfolioOptimizationResume)
+	s.mux.HandleFunc("GET /api/v1/portfolio-schedules/{id}", s.portfolioScheduleGet)
+	s.mux.HandleFunc("PUT /api/v1/portfolio-schedules/{id}", s.portfolioScheduleSave)
+	s.mux.HandleFunc("DELETE /api/v1/portfolio-schedules/{id}", s.portfolioScheduleDelete)
 	s.mux.HandleFunc("GET /api/v1/portfolio-inspections", s.portfolioInspectionList)
 	s.mux.HandleFunc("POST /api/v1/portfolio-inspections", s.portfolioInspectionCreate)
 	s.mux.HandleFunc("GET /api/v1/portfolio-inspections/{id}", s.portfolioInspectionGet)
 	s.mux.HandleFunc("POST /api/v1/portfolio-inspections/{id}/resume", s.portfolioInspectionResume)
+	s.mux.HandleFunc("POST /api/v1/portfolio-inspections/{id}/bind-plan", s.portfolioInspectionBindPlan)
 	s.mux.HandleFunc("POST /api/v1/portfolio-inspections/{id}/cancel", s.portfolioInspectionCancel)
 	s.mux.HandleFunc("POST /api/v1/reviews/portfolio-expectations", s.portfolioExpectationCreate)
 	s.mux.HandleFunc("GET /api/v1/reviews/portfolio-expectations/latest", s.portfolioExpectationLatest)
@@ -612,6 +630,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/v1/reviews/posts", s.reviewPosts)
 	s.mux.HandleFunc("GET /api/v1/reviews/posts/{id}", s.reviewPost)
 	s.mux.HandleFunc("DELETE /api/v1/reviews/posts/{id}", s.reviewPostDelete)
+	s.mux.HandleFunc("GET /api/v1/reviews/daily-summary/schedule", s.reviewScheduleGet)
+	s.mux.HandleFunc("PUT /api/v1/reviews/daily-summary/schedule", s.reviewScheduleSave)
 	s.mux.HandleFunc("GET /api/v1/reviews/daily-summary", s.reviewDailySummaryGet)
 	s.mux.HandleFunc("POST /api/v1/reviews/daily-summary/anonymize", s.reviewDailySummaryAnonymize)
 	s.mux.HandleFunc("GET /api/v1/reviews/daily-summary/window", s.reviewDailySummaryWindow)
@@ -645,6 +665,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/v1/settings/llm/test", s.settingsLLMTest)
 	s.mux.HandleFunc("GET /api/v1/settings/notifications", s.settingsNotificationsGet)
 	s.mux.HandleFunc("PUT /api/v1/settings/notifications", s.settingsNotificationsUpdate)
+	s.mux.HandleFunc("POST /api/v1/settings/notifications/reveal", s.settingsNotificationsReveal)
 	s.mux.HandleFunc("POST /api/v1/settings/notifications/test", s.settingsNotificationsTest)
 	s.mux.HandleFunc("GET /api/v1/ai/ws", s.aiChatWebSocket)
 	s.mux.HandleFunc("POST /api/v1/strategy/inflections/evaluate", s.inflectionEvaluate)

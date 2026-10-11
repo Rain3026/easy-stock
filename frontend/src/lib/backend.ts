@@ -1063,6 +1063,8 @@ export type PortfolioProfileRules = {
 };
 
 export type PortfolioResearchRequest = {
+	portfolio_plan_id?: string;
+	portfolio_plan_name?: string;
  source_optimization_id?: string;
  trader_profile: PortfolioTraderProfile;
  holdings: PortfolioHolding[];
@@ -1168,6 +1170,7 @@ export type PortfolioInspectionReport = {
 };
 
 export type PortfolioInspectionJob = {
+ schedule_id?: string;
  resumed_from?: string;
  resume_available?: boolean;
  reused_stocks?: number;

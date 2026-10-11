@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"sync"
+	"time"
 
 	"easy-stock/backend/internal/appsettings"
 )
@@ -11,9 +12,11 @@ import (
 type SendFunc func(context.Context, string, appsettings.NotificationChannel, Message) error
 
 type Event struct {
-	Kind    string
-	Failed  bool
-	Message Message
+	// Nil follows global event settings; a non-nil list selects scheduled delivery channels.
+	Channels []string
+	Kind     string
+	Failed   bool
+	Message  Message
 }
 
 type delivery struct {
@@ -24,21 +27,22 @@ type delivery struct {
 // Dispatcher keeps webhook latency out of task completion and uses a bounded
 // queue. The worker starts only when an enabled channel receives an event.
 type Dispatcher struct {
-	mu       sync.Mutex
-	closed   bool
-	started  bool
-	ctx      context.Context
-	cancel   context.CancelFunc
-	wg       sync.WaitGroup
-	queue    chan delivery
-	send     SendFunc
-	settings func() appsettings.Notifications
-	logger   *log.Logger
+	mu           sync.Mutex
+	closed       bool
+	started      bool
+	ctx          context.Context
+	cancel       context.CancelFunc
+	wg           sync.WaitGroup
+	queue        chan delivery
+	send         SendFunc
+	settings     func() appsettings.Notifications
+	logger       *log.Logger
+	partInterval time.Duration
 }
 
 func NewDispatcher(send SendFunc, settings func() appsettings.Notifications, logger *log.Logger) *Dispatcher {
 	ctx, cancel := context.WithCancel(context.Background())
-	return &Dispatcher{ctx: ctx, cancel: cancel, queue: make(chan delivery, 32), send: send, settings: settings, logger: logger}
+	return &Dispatcher{ctx: ctx, cancel: cancel, queue: make(chan delivery, 32), send: send, settings: settings, logger: logger, partInterval: 3 * time.Second}
 }
 
 func (d *Dispatcher) Publish(event Event) {
@@ -55,7 +59,7 @@ func (d *Dispatcher) Publish(event Event) {
 		name   string
 		config appsettings.NotificationChannel
 	}{{"feishu", cfg.Feishu}, {"dingtalk", cfg.Dingtalk}} {
-		if !channel.config.Enabled || channel.config.Webhook == "" {
+		if !selectedChannel(event, channel.name) || !channel.config.Enabled || channel.config.Webhook == "" {
 			continue
 		}
 		if !d.started {
@@ -80,23 +84,7 @@ func (d *Dispatcher) run() {
 		case <-d.ctx.Done():
 			return
 		case item := <-d.queue:
-			// Resolve credentials at send time so disabling a channel or changing
-			// its robot also applies to notifications still waiting in the queue.
-			cfg := d.settings()
-			channel := cfg.Feishu
-			if item.channel == "dingtalk" {
-				channel = cfg.Dingtalk
-			}
-			if !channel.Enabled || channel.Webhook == "" || !eventEnabled(cfg.Events, item.event) {
-				continue
-			}
-			ctx, cancel := context.WithTimeout(d.ctx, Timeout)
-			err := d.send(ctx, item.channel, channel, item.event.Message)
-			cancel()
-			if err != nil && d.logger != nil {
-				// Sender errors are credential-free; do not log message content.
-				d.logger.Printf("level=warn event=notification_send_failed channel=%s error=%q", item.channel, err)
-			}
+			d.deliver(item)
 		}
 	}
 }
@@ -104,6 +92,9 @@ func (d *Dispatcher) run() {
 func eventEnabled(events appsettings.NotificationEvents, event Event) bool {
 	if event.Failed && !events.TaskFailed {
 		return false
+	}
+	if (event.Kind == "portfolio_inspection" || event.Kind == "daily_review") && event.Channels != nil {
+		return true
 	}
 	switch event.Kind {
 	case "stock_research":
@@ -121,4 +112,52 @@ func (d *Dispatcher) Close() {
 	d.cancel()
 	d.mu.Unlock()
 	d.wg.Wait()
+}
+
+func selectedChannel(event Event, channel string) bool {
+	if event.Channels == nil {
+		return true
+	}
+	for _, selected := range event.Channels {
+		if selected == channel {
+			return true
+		}
+	}
+	return false
+}
+
+func (d *Dispatcher) deliver(item delivery) {
+	parts := SplitMessage(item.event.Message)
+	for i, message := range parts {
+		if i > 0 && d.partInterval > 0 {
+			timer := time.NewTimer(d.partInterval)
+			select {
+			case <-d.ctx.Done():
+				timer.Stop()
+				return
+			case <-timer.C:
+			}
+		}
+		if d.ctx.Err() != nil {
+			return
+		}
+		// Recheck each part: disabling a robot also stops a multipart delivery.
+		cfg := d.settings()
+		channel := cfg.Feishu
+		if item.channel == "dingtalk" {
+			channel = cfg.Dingtalk
+		}
+		if !channel.Enabled || channel.Webhook == "" || !eventEnabled(cfg.Events, item.event) {
+			return
+		}
+		ctx, cancel := context.WithTimeout(d.ctx, Timeout)
+		err := d.send(ctx, item.channel, channel, message)
+		cancel()
+		if err != nil {
+			if d.logger != nil {
+				d.logger.Printf("level=warn event=notification_send_failed channel=%s part=%d total=%d error=%q", item.channel, i+1, len(parts), err)
+			}
+			return // Do not send later sections after a failed part or retry ambiguously.
+		}
+	}
 }
