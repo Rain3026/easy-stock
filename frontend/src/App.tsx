@@ -45,8 +45,6 @@ import {
 	ThemeOverview,
 	StockAIAnalysis,
 	ThemeScreenLane,
-	ThemeScreenPagination,
-	ThemeScreenSort,
 	buildStreamUrl,
 	requestJSON,
 	resolveBackendConfig,
@@ -78,17 +76,11 @@ import { useThemeOverview } from './lib/use-theme-overview';
 import { useThemeConstituents, sameTheme } from './lib/use-theme-constituents';
 import { useThemeKLines } from './lib/use-theme-klines';
 import { ThemeIndexPanel } from './components/ThemeIndexPanel';
+import { ThemeStockPagination, ThemeStockSortHeader } from './components/ThemeStockTableControls';
+import { getThemeStockPage, themeStockSortColumns, type ThemeStockSort, type SortDirection } from './lib/theme-stock-table';
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 type WorkspaceMode = 'themes' | 'limit-up' | 'mastery' | 'reviews' | 'stock-ai' | 'portfolio-inspection' | 'ai' | 'market' | 'token-usage';
-
-const emptyStockPagination = (): ThemeScreenPagination => ({
-	page: 1,
-	page_size: 20,
-	total: 0,
-	total_pages: 0,
-	has_more: false,
-});
 
 export function App() {
 	const { theme, toggleTheme } = useTheme();
@@ -123,7 +115,9 @@ export function App() {
 	const [stockQuery, setStockQuery] = useState('');
 	const [debouncedStockQuery, setDebouncedStockQuery] = useState('');
 	const [stockPage, setStockPage] = useState(1);
-	const [stockSort, setStockSort] = useState<ThemeScreenSort>('rank_score');
+	const [stockSort, setStockSort] = useState<ThemeStockSort>('leader_score');
+	const [stockSortDirection, setStockSortDirection] = useState<SortDirection>('desc');
+	const [stockPageSize, setStockPageSize] = useState(20);
 	const [stockLane, setStockLane] = useState<ThemeScreenLane>('all');
 	const limitUp = useLimitUpWorkspace(config, workspaceMode === 'limit-up');
 	const { data: limitUpData, state: limitUpState, error: limitUpError } = limitUp.ladder;
@@ -169,9 +163,8 @@ export function App() {
 	const activeEmotion = activeOverview && activeStrengthScore !== null ? calculateThemeEmotion(activeOverview, activeStrengthScore) : null;
 	const isTrendOverview = typeof activeOverview?.trend_score === 'number';
 	const isKaipanlaOverview = activeOverview?.theme.startsWith('kpl:') || activeOverview?.theme.startsWith('fusion:') || false;
-	const constituents = useThemeConstituents(config, workspaceMode === 'themes', activeOverview, { page: stockPage, node: selectedNode, lane: stockLane, sort: stockSort, query: debouncedStockQuery }, themeRefreshKey, overview.refresh);
+	const constituents = useThemeConstituents(config, workspaceMode === 'themes', activeOverview, themeRefreshKey, overview.refresh);
 	const sectorMap = constituents.data?.map || null;
-	const stockPagination = constituents.data?.pagination || emptyStockPagination();
 	const themeState = constituents.status;
 	const constituentsComplete = constituents.data?.complete === true;
 	const baseThemeStocks = useMemo(() => {
@@ -197,11 +190,12 @@ export function App() {
 		const withSelection = { ...sectorMap, groups: [...sectorMap.groups, { id: 'selected', name: '当前选择', nodes: [{ id: 'selected', name: selectedBase.nodes[0] || '当前选择', change_percent: 0, main_net_inflow: 0, match_status: 'matched', stocks: [selectedBase] }] }] };
 		return buildThemeStocks(withSelection, liveQuotes, leadershipHistories);
 	}, [leadershipHistories, liveQuotes, sectorMap, selectedBase, baseThemeStocks]);
-	// The server orders the complete pool. Keep rows stable as individual metrics arrive.
-	const visibleStocks = useMemo(() => {
-		const order = new Map(baseThemeStocks.map((stock, index) => [stock.symbol, index]));
-		return themeStocks.filter(stock => order.has(stock.symbol)).sort((a, b) => (order.get(a.symbol) ?? 0) - (order.get(b.symbol) ?? 0));
-	}, [baseThemeStocks, themeStocks]);
+	const stockTable = useMemo(() => getThemeStockPage(themeStocks, sectorMap, historySymbols, leadershipHistories, {
+		sort: stockSort, direction: stockSortDirection, page: stockPage, pageSize: stockPageSize,
+		node: selectedNode, lane: stockLane, query: debouncedStockQuery,
+	}), [themeStocks, sectorMap, historySymbols, leadershipHistories, stockSort, stockSortDirection, stockPage, stockPageSize, selectedNode, stockLane, debouncedStockQuery]);
+	const visibleStocks = stockTable.stocks;
+	const stockPagination = stockTable.pagination;
 	const selectedStock = themeStocks.find(stock => stock.symbol === selectedBase?.symbol) || selectedBase;
 	const selectedHistoryReady = Boolean(selectedStock && leadershipHistories[selectedStock.symbol]?.length);
 	const selectedHistoryFailed = Boolean(selectedStock && historyErrorSymbols.has(selectedStock.symbol));
@@ -256,6 +250,10 @@ export function App() {
 		const timer = window.setTimeout(() => { setDebouncedStockQuery(stockQuery.trim()); setStockPage(1); }, 300);
 		return () => window.clearTimeout(timer);
 	}, [stockQuery]);
+
+	useEffect(() => {
+		if (constituentsComplete && stockPage !== stockPagination.page) setStockPage(stockPagination.page);
+	}, [constituentsComplete, stockPage, stockPagination.page]);
 
 	useEffect(() => {
 		if (selectedBase && selectedSymbol !== selectedBase.symbol) setSelectedSymbol(selectedBase.symbol);
@@ -370,6 +368,12 @@ export function App() {
 		switchWorkspace('ai');
 	};
 
+	const sortThemeStockColumn = (column: ThemeStockSort) => {
+		setStockSortDirection(stockSort === column && stockSortDirection === 'desc' ? 'asc' : 'desc');
+		setStockSort(column);
+		setStockPage(1);
+	};
+
 	const activateTheme = (theme: string) => {
 		if (theme === activeTheme) {
 			return;
@@ -378,7 +382,8 @@ export function App() {
 		setStockPage(1);
 		setStockQuery('');
 		setDebouncedStockQuery('');
-		setStockSort('rank_score');
+		setStockSort('leader_score');
+		setStockSortDirection('desc');
 		setStockLane('all');
 		setSelectedSymbol('');
 		setLiveQuotes({});
@@ -556,7 +561,7 @@ export function App() {
 
 					<section className="node-filter" aria-label="题材细分">
 						<button type="button" className={selectedNode === 'all' ? 'active' : ''} onClick={() => { setSelectedNode('all'); setStockPage(1); }}>
-							{constituentsComplete ? '全部关联' : '已加载'} <span>{constituents.data ? stockPagination.total : '--'}</span>
+							{constituentsComplete ? '全部关联' : '已加载'} <span>{constituents.data?.pagination.total ?? '--'}</span>
 						</button>
 						{themeNodes.map((node) => (
 							<button type="button" className={selectedNode === node.id ? 'active' : ''} key={node.id} onClick={() => { setSelectedNode(node.id); setStockPage(1); }}>
@@ -579,17 +584,22 @@ export function App() {
 						</div>
 						<div className="stock-controls">
 							<label><span>涨跌幅制度</span><select value={stockLane} onChange={(event) => { setStockLane(event.target.value as ThemeScreenLane); setStockPage(1); }}><option value="all">全部</option><option value="10cm">10cm</option><option value="20cm">20cm</option><option value="30cm">30cm</option></select></label>
-							<label><span>排序</span><select value={stockSort} onChange={(event) => { setStockSort(event.target.value as ThemeScreenSort); setStockPage(1); }}><option value="rank_score">{constituentsComplete ? '全池领导力' : '来源优先顺序'}</option><option value="change_percent">当日涨幅</option><option value="amount">成交额</option><option value="limit_up_streak">连板高度</option></select></label>
 							<label className="stock-search">
 								<Search size={16} aria-hidden="true" />
-								<input value={stockQuery} onChange={(event) => setStockQuery(event.target.value)} placeholder="搜索完整候选池中的代码、名称或细分" />
+								<input aria-label="搜索个股" value={stockQuery} onChange={(event) => setStockQuery(event.target.value)} placeholder="搜索完整候选池中的代码、名称或细分" />
 							</label>
+							<select className="stock-more-sort" aria-label="更多排序" value={stockSort === 'amount' || stockSort === 'limit_up_streak' ? stockSort : ''} onChange={event => { setStockSort(event.target.value as ThemeStockSort); setStockSortDirection('desc'); setStockPage(1); }}>
+								<option value="" disabled>更多排序</option><option value="amount">成交额 ↓</option><option value="limit_up_streak">连板高度 ↓</option>
+							</select>
 						</div>
+						<ThemeStockPagination pagination={stockPagination} complete={constituentsComplete} fetching={constituents.fetching} visibleCount={visibleStocks.length} pageSize={stockPageSize} onPage={setStockPage} onPageSize={size => { setStockPageSize(size); setStockPage(1); }} />
 						<div className="stock-table-wrap">
 							<table className="stock-table">
 								<thead>
 									<tr>
-										<th>身份</th><th>股票</th><th>阶段</th><th>领导力</th><th>可交易</th><th>近5日</th><th>当日</th><th>所属细分</th>
+										<th scope="col">身份</th><th scope="col">股票</th><th scope="col">阶段</th>
+										{themeStockSortColumns.map(column => <ThemeStockSortHeader key={column.key} column={column.key} label={column.label} sort={stockSort} direction={stockSortDirection} onSort={sortThemeStockColumn} />)}
+										<th scope="col">所属细分</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -620,14 +630,7 @@ export function App() {
 							{themeState === 'ready' && constituentsComplete && !visibleStocks.length && <EmptyState icon={<Search size={22} />} title="没有匹配个股" detail="更换细分节点或清空搜索条件。" />}
 						</div>
 						{constituents.error && <p className="load-notice">{constituents.error} <button type="button" onClick={() => setThemeRefreshKey(key => key + 1)}>重试成分</button></p>}
-						<div className="stock-pagination" aria-label="题材个股分页">
-							<span>{constituentsComplete ? `共 ${stockPagination.total} 只 · 每页 ${stockPagination.page_size} 只` : `已加载 ${visibleStocks.length} 只 · 完整成分${constituents.fetching ? '更新中' : '暂不可用'}`}</span>
-							<div>
-								<button type="button" disabled={!constituentsComplete || stockPage <= 1 || constituents.fetching} onClick={() => setStockPage((current) => Math.max(1, current - 1))}>上一页</button>
-								<strong>{constituentsComplete ? `${stockPagination.page}/${stockPagination.total_pages || 1}` : '--'}</strong>
-								<button type="button" disabled={!constituentsComplete || !stockPagination.has_more || constituents.fetching} onClick={() => setStockPage((current) => current + 1)}>下一页</button>
-							</div>
-						</div>
+
 					</section>
 				</section>
 

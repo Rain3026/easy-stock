@@ -1,44 +1,42 @@
 import { useEffect, useRef, useState } from 'react';
-import { BackendConfig, BackendRequestError, SectorMap, ThemeOverview, ThemeScreenData, ThemeScreenLane, ThemeScreenSort, requestJSON } from './backend';
+import { BackendConfig, BackendRequestError, SectorMap, ThemeOverview, ThemeScreenData, requestJSON } from './backend';
 
-export type ThemeFilter = { page: number; node: string; lane: ThemeScreenLane; sort: ThemeScreenSort; query: string };
 export function sameTheme(item: ThemeOverview, id: string) { return item.theme === id || item.aliases?.includes(id); }
 
 // A preview has known membership, never an authoritative full-pool count.
-export function leaderPreview(theme: ThemeOverview, filter: ThemeFilter): ThemeScreenData | null {
-	if (!theme.leader_stocks?.length || filter.page !== 1 || filter.node !== 'all' || filter.lane !== 'all' || filter.query) return null;
+export function leaderPreview(theme: ThemeOverview): ThemeScreenData | null {
+	if (!theme.leader_stocks?.length) return null;
 	const meta = { source: theme.source || '', fetched_at: '', latency_ms: 0, stale: Boolean(theme.carry_forward), trade_date: theme.trade_date, snapshot_id: theme.snapshot_id };
 	const industry = theme.theme.startsWith('industry:');
 	const map: SectorMap = { theme: theme.theme, name: theme.name, tabs: [], meta, groups: [{ id: industry ? 'industry_members' : 'kaipanla', name: '已知领涨', nodes: [{ id: industry ? 'industry_core' : 'kaipanla_leaders', name: '已知领涨', change_percent: 0, main_net_inflow: 0, match_status: 'matched', stocks: theme.leader_stocks.map(stock => ({ ...stock, price: stock.price || 0, change: stock.change || 0, change_percent: stock.change_percent || 0, amount: stock.amount || 0, volume: stock.volume || 0, meta: stock.meta || meta })) }] }] };
-	return { map, order: theme.leader_stocks.map(stock => stock.symbol), complete: false, coverage: 'leaders', source_snapshot_id: theme.snapshot_id, snapshot_id: theme.snapshot_id || '', sort: filter.sort, pagination: { page: 1, page_size: 20, total: theme.leader_stocks.length, total_pages: 0, has_more: false } };
+	return { map, order: theme.leader_stocks.map(stock => stock.symbol), complete: false, coverage: 'leaders', source_snapshot_id: theme.snapshot_id, snapshot_id: theme.snapshot_id || '', sort: 'rank_score', pagination: { page: 1, page_size: 20, total: theme.leader_stocks.length, total_pages: 0, has_more: false } };
 }
 
-export function useThemeConstituents(config: BackendConfig | null, active: boolean, theme: ThemeOverview | null, filter: ThemeFilter, refreshKey: number, recover: () => Promise<ThemeOverview[]>) {
-	const requestKey = JSON.stringify([config?.backendUrl, theme?.theme, theme?.snapshot_id, filter]);
+export function useThemeConstituents(config: BackendConfig | null, active: boolean, theme: ThemeOverview | null, refreshKey: number, recover: () => Promise<ThemeOverview[]>) {
+	const requestKey = JSON.stringify([config?.backendUrl, theme?.theme, theme?.snapshot_id]);
 	const [state, setState] = useState<{ key: string; data: ThemeScreenData | null; fetching: boolean; error: string }>({ key: '', data: null, fetching: false, error: '' });
 	const cache = useRef(new Map<string, ThemeScreenData>());
 	const recoveries = useRef(new Set<string>());
 	const recoveryEpoch = useRef(refreshKey);
-	const input = useRef({ theme, filter, recover }); input.current = { theme, filter, recover };
+	const input = useRef({ theme, recover }); input.current = { theme, recover };
 	useEffect(() => {
 		if (!config || !active || !input.current.theme) return;
 		if (recoveryEpoch.current !== refreshKey) { recoveries.current.clear(); recoveryEpoch.current = refreshKey; }
 		const selected = input.current.theme;
-		const filters = input.current.filter;
 		const abort = new AbortController();
-		let data = cache.current.get(requestKey) || leaderPreview(selected, filters);
+		let data = cache.current.get(requestKey) || leaderPreview(selected);
 		setState({ key: requestKey, data, fetching: true, error: '' });
 		const run = async (current: ThemeOverview, retry: boolean): Promise<void> => {
 			let complete = false; let expired = false; let fullError = '';
-			const params = new URLSearchParams({ theme: current.theme, page: String(filters.page), page_size: '20', node: filters.node, lane: filters.lane, sort: filters.sort });
+			const params = new URLSearchParams({ theme: current.theme, full_pool: '1', sort: 'rank_score' });
 			if (current.snapshot_id) params.set('snapshot_id', current.snapshot_id);
-			if (filters.query) params.set('q', filters.query);
 			const load = async (leaders: boolean) => {
 				const query = new URLSearchParams(params); if (leaders) query.set('phase', 'leaders');
 				try {
 					const result = await requestJSON<{ data: ThemeScreenData }>(config, `/api/v1/themes/screen?${query}`, { signal: abort.signal });
 					if (abort.signal.aborted || expired || (leaders && (complete || data?.complete))) return;
 					if (leaders && !result.data.map.groups?.some(group => group.nodes.some(node => node.stocks.length))) return;
+					if (!leaders && (result.data.order?.length ?? 0) !== result.data.pagination.total) throw new Error('完整成分未全部返回，请更新本地后端后重试');
 					data = { ...result.data, complete: result.data.complete ?? !leaders }; complete = !leaders;
 					cache.current.set(requestKey, data);
 					if (cache.current.size > 32) cache.current.delete(cache.current.keys().next().value!);
@@ -50,7 +48,7 @@ export function useThemeConstituents(config: BackendConfig | null, active: boole
 				}
 			};
 			// Each response publishes itself; this join only handles terminal state/recovery.
-			await Promise.allSettled([load(false), ...(filters.page === 1 ? [load(true)] : [])]);
+			await Promise.allSettled([load(false), load(true)]);
 			if (abort.signal.aborted) return;
 			// Recovery changes the overview and can restart this effect. Track the
 			// theme (including fusion aliases), so a new snapshot gets only one retry.
@@ -72,7 +70,7 @@ export function useThemeConstituents(config: BackendConfig | null, active: boole
 		void run(selected, false).finally(() => clearTimeout(timeout));
 		return () => { clearTimeout(timeout); abort.abort(); };
 	}, [config, active, requestKey, refreshKey]);
-	const current = state.key === requestKey ? state : { key: requestKey, data: cache.current.get(requestKey) || (theme ? leaderPreview(theme, filter) : null), fetching: active && Boolean(theme), error: '' };
+	const current = state.key === requestKey ? state : { key: requestKey, data: cache.current.get(requestKey) || (theme ? leaderPreview(theme) : null), fetching: active && Boolean(theme), error: '' };
 	const status = current.fetching ? 'loading' : current.error ? (current.data ? 'partial' : 'error') : current.data ? 'ready' : 'idle';
 	return { ...current, status } as const;
 }

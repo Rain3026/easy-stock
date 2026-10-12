@@ -161,6 +161,11 @@ func (s *Server) themeScreenHandler(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, err.Error())
 		return
 	}
+	fullPool := r.URL.Query().Get("full_pool")
+	if fullPool != "" && fullPool != "0" && fullPool != "1" {
+		writeError(w, http.StatusBadRequest, "full_pool must be 0 or 1")
+		return
+	}
 	sortBy := firstNonEmpty(strings.TrimSpace(r.URL.Query().Get("sort")), "rank_score")
 	if !validThemeSort(sortBy) {
 		writeError(w, http.StatusBadRequest, "sort must be rank_score, change_percent, amount, or limit_up_streak")
@@ -213,6 +218,13 @@ func (s *Server) themeScreenHandler(w http.ResponseWriter, r *http.Request) {
 	filtered := filterThemeCandidates(allCandidates, nodeFilter, lane, query)
 	sortThemeCandidates(filtered, sortBy)
 	total := len(filtered)
+	// The UI computes history-based leadership/tradability over this same pool,
+	// then sorts those displayed values before applying its local pagination.
+	// Existing clients retain the bounded, server-paginated response by default.
+	if fullPool == "1" {
+		page = 1
+		pageSize = max(1, total)
+	}
 	totalPages := 0
 	if total > 0 {
 		totalPages = (total + pageSize - 1) / pageSize
