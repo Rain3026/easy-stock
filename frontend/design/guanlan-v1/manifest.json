@@ -1,0 +1,29 @@
+{
+  "created_at": "2026-10-14T18:17:37.833934+08:00",
+  "title": "观澜 V1",
+  "type": "static_raster_design_only",
+  "approval": "pending_user_review",
+  "generator": "built-in image_gen",
+  "existing_today_overview_modified": false,
+  "application_code_modified": false,
+  "files": [
+    {
+      "path": "01-guanlan-overview.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "5fd873762f59a39caf998935839d2ba1518b24cb21220aec91cc7948b9147a4e"
+    },
+    {
+      "path": "02-guanlan-library.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "ce2d07545a7198f3814302fac9fa92f21cb44eaf3ae4cd48ddd5a1ef4bf6f322"
+    },
+    {
+      "path": "03-guanlan-settings.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "a8c7b2836f707b7fbf17026968441516989bf9cca283a8b51c16a00c96e49773"
+    }
+  ]
+}

@@ -1,0 +1,22 @@
+{
+  "scope": "isolated temporary SQLite and HTTP mux; original services/databases untouched",
+  "store_race_tests": 5,
+  "http_contract_test": 1,
+  "checks": [
+    "immutable versions",
+    "idempotent save",
+    "atomic save-and-activate rollback",
+    "active archive guard",
+    "copy/new IDs",
+    "defaults/preset isolation",
+    "restart/search/page persistence",
+    "concurrent optimistic conflict",
+    "type/size/tool-binding validation",
+    "shared watchlists",
+    "version references",
+    "all eight catalog defaults validate"
+  ],
+  "command": "go test -C backend ./internal/guanlan ./internal/httpapi -run TestGuanlan -race -count=1",
+  "result": "pass",
+  "agent_gateway_configured": false
+}

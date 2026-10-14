@@ -1,0 +1,44 @@
+PROMPT 1
+Use case: ui-mockup, precise edit of the reference static EasyStock design.
+Create one polished STATIC desktop UI design image of “观澜” V2 showing free component resizing. Preserve the original light EasyStock design language, exact page name “观澜”, original sidebar item “今日总览” ABOVE separate selected “观澜”, other sidebar names, white cards, navy text, royal blue controls, subtle gray borders. Do not replace 今日总览. No application code or interactive prototype. Landscape full screen approximately1536x1024, crisp Simplified Chinese.
+Change the old simplistic small/medium/wide size selector to obvious independent WIDTH and HEIGHT controls with free resizing.
+Header: “观澜”, subtitle “自由组合你的核心观察”, small “设计稿 V2 · 示例数据”.
+Top toolbar in layout edit mode: “编辑布局”; small “拖动标题栏移动 · 拖动边框缩放”; buttons “取消” and blue “保存布局”.
+Main canvas left: keep index strip, large volume card, AI analysis card and lower market width / short term / watchlist cards, with visibly DIFFERENT widths and heights, not equal-sized squares. The selected “沪深量能” card has a prominent thin BLUE outline, eight visible small square resize handles (four corners and four side midpoints). The right midpoint grip indicates horizontal resize and bottom midpoint vertical resize, one diagonal arrow at lower-right grip. Compact size badge just BELOW selected card: “760 × 420 px”. The title has a six-dot move handle. Other cards stay unselected; no delete action or giant pointer. Main numbers and sample content may be slightly more compact to fit.
+The selected volume card retains actual 12,487, predicted13,680, mean17,670 and change−18.3%, a blue historical amount chart and two high dashed reference lines. Do not place small misplaced numeric labels in chart.
+Opaque white right side panel about380px wide, replacing old panel. Header exact “组件设置”, subtitle “沪深量能”, close x. Three horizontal tabs “数据”, “尺寸”, “样式”; “尺寸” blue active.
+Form in panel:
+section “组件占用空间”.
+Row two numeric stepper fields side by side: “宽度” value “760” suffix “px”; “高度” value “420” suffix “px”. Add small numeric +/- controls.
+Two labeled sliders for 宽度 and 高度, different positions.
+“吸附网格” blue toggle ON; “锁定宽高比” gray toggle OFF; “内容自适应” blue toggle ON.
+section “内部布局”.
+“内边距” numeric “16 px”; “内容间距” numeric “12 px”.
+“指标排列” segmented choices “自动” selected blue / “2列” / “4列”.
+“恢复此组件默认尺寸” quiet text button.
+Small footer note “仅影响观澜中的当前组件”.
+Fixed bottom buttons outline “取消”, blue “应用设置”.
+Readable labels and balanced spacing. This must visually make arbitrary horizontal AND vertical resizing unmistakable, rather than offering only S/M/L presets. No decorative scenery, no programmatic code, no HTML.
+
+PROMPT 2
+Use case: ui-mockup, precise edit of the reference static EasyStock design.
+Create one STATIC polished desktop UI design image “观澜” V2 showing customization of fonts, title bar and internal space. Keep original EasyStock sidebar and identity; exact selected page “观澜”, separate old “今日总览” above it, white cards and pale cool-gray background, navy typography, royal blue controls, clean readable Simplified Chinese. Landscape approximately1536x1024. No interactive prototype or code.
+Main page header “观澜” with small “设计稿 V2 · 示例数据”. Keep the existing market cards and chart as context. Volume card is selected by thin blue outline. In this preview, its NUMBER text is VISIBLY LARGER, title slightly larger, title bar COMPACTER, padding smaller and chart occupies its available space cleanly. Actual12,487 / predicted13,680 / mean17,670 / change−18.3%, labels clear. Three other cards below may have smaller type, illustrating that style is PER-COMPONENT. No text clipping in selected card.
+At right a white panel roughly400px wide. Header exact “组件设置”, subtitle “沪深量能”, x close. Three horizontal tabs exact “数据”, “尺寸”, “样式”; “样式” activeblue.
+Clear compact form:
+“标题文字” input “沪深量能”.
+Section “文字大小” with three rows, each contains label, short slider and numeric input:
+“标题字号” “18 px”
+“数据字号” “36 px”
+“说明字号” “12 px”.
+Section “空间与密度”:
+“标题栏高度” numeric stepper “44 px”.
+“图表高度” numeric stepper “220 px”.
+“内部留白” numeric stepper “12 px”.
+“内容密度” segmented choices “紧凑” selected / “标准” / “宽松”.
+“标题对齐” segmented choices “左对齐” selected / “居中”.
+“随卡片自动重排” toggle ON.
+Below a small pale blue sample preview rectangle: label “字号预览”, short title “沪深量能”, largeblue “13,680”, small “预计全天 · 亿元”. This preview must be visible above footer, reduce other spacing as needed.
+Small note “仅作用于观澜中的当前组件”.
+Fixed bottom buttons outline “恢复默认”, blue “应用样式”.
+Keep forms aligned and legible. Clearly communicate that title, numeric data, explanatory text, title bar height, chart height and padding are independently adjustable. Preserve financial numbers/units; do not hide data timestamps or mix AI evidence time with live quote time. No huge promotional text, no new unrelated features, no implementation technical jargon.

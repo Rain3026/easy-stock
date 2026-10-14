@@ -6,7 +6,7 @@ export const workspaces = [
  { id:'research', name:'研究中心', description:'用共同证据研究分歧，让原判断接受时间检验', tabs:[['debate','多空辨析'],['opinions','观点资料'],['verify','复盘验证'],['archives','研究档案'],['knowledge','策略知识']] },
 ] as const;
 export type WorkspaceID = typeof workspaces[number]['id'];
-export type WorkspaceRoute = { workspace:WorkspaceID|'ai'|'news'|'tasks'|'settings';tab:string;params:URLSearchParams };
+export type WorkspaceRoute = { workspace:WorkspaceID|'ai'|'news'|'tasks'|'settings'|'boards'|'guanlan';tab:string;params:URLSearchParams };
 const legacy:Record<string,string>={ 'daily-research':'today/overview', reviews:'research/opinions', themes:'opportunity/themes', 'limit-up':'opportunity/sentiment',mastery:'research/knowledge','stock-ai':'stock/overview','portfolio-inspection':'portfolio/risk','token-usage':'tasks/usage'};
 export function parseWorkspaceRoute(hash:string):WorkspaceRoute{
  const [path='',query='']=hash.replace(/^#/,'').split('?');const params=new URLSearchParams(query);
@@ -17,6 +17,8 @@ export function parseWorkspaceRoute(hash:string):WorkspaceRoute{
   else{params.set('view',tab||'pulse');space='news';tab='search'}
  }
  const area=workspaces.find(v=>v.id===space);
+ if(space==='boards')return{workspace:'boards',tab:['versions','library','edit'].includes(tab)?tab:'versions',params};
+ if(space==='guanlan')return{workspace:'guanlan',tab:'overview',params};
  if(area) return {workspace:area.id,tab:area.tabs.some(v=>v[0]===tab)?tab:area.tabs[0][0],params};
  if(['ai','news','tasks','settings'].includes(space))return{workspace:space as WorkspaceRoute['workspace'],tab:tab||({ai:'chat',news:'search',tasks:'tasks',settings:'model'}[space]!),params};
  return {workspace:'today',tab:'overview',params};
@@ -25,6 +27,7 @@ export function workspaceHash(workspace:WorkspaceRoute['workspace'],tab:string,p
  const query=params.toString();return `#${workspace}/${tab}${query?'?'+query:''}`;
 }
 export function legacyWorkspaceMode(r:WorkspaceRoute){
+ if(r.workspace==='boards'||r.workspace==='guanlan')return r.workspace;
  if(r.workspace==='settings')return 'settings';if(r.workspace==='ai')return 'ai';if(r.workspace==='tasks')return 'token-usage';
  if(r.workspace==='today')return r.tab==='overview'?'daily-research':'market';
  if(r.workspace==='opportunity')return r.tab==='themes'?'themes':r.tab==='sentiment'&&r.params.get('view')!=='billboard'?'limit-up':'market';

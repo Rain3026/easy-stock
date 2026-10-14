@@ -1,0 +1,54 @@
+Generation method: built-in image_gen. Static raster mockups only.
+
+PROMPT 1
+Use case: ui-mockup. Generate one polished STATIC screenshot-like desktop UI design image, landscape 2048x1360, flat front-on, crisp Simplified Chinese text, no browser chrome. A new independent EasyStock page named exactly “观澜” (观沧海的观，澜沧江的澜). Existing “今日总览” remains a separate navigation item; do not replace it.
+Style matches an existing professional light financial research app: white 190px sidebar, very pale cool-gray main background, white cards, subtle gray borders, small 10px corners, navy typography, royal blue accents, restrained line icons, readable data density, no scenery or ornamental gradients.
+Sidebar: easy-stock / AI STOCK LAB; 今日总览; 观澜 (blue selected, 新); 机会发现; 个股研究; 持仓管理; 研究中心. Lower: 资讯检索; AI 助手. Bottom: 用量与任务; 系统设置.
+Header: “观澜”, subtitle “自由组合你的核心观察”; right small “设计稿 · 示例数据”. Toolbar: “我的看盘台 ▾”, “6 个组件”; buttons “添加组件”, “编辑布局”, “刷新数据”. Status: “2026-10-14 · 盘中” / “行情更新至 14:35 · AI 基于 13:30 证据”.
+Six card layout:
+1 full-width slim “指数参照”: 上证指数 −0.90%, 深证成指 −2.00%, 创业板指 −3.10%, 沪深300 −1.40%, 恒生指数 −0.10%, 纳指100 −0.30%, negatives green.
+2 large middle left two-thirds width “沪深量能”, small “成交额 · 亿元”. Four metrics 今日已成交 12,487 / 预计全天 13,680 blue / 前20日均额 17,670 / 较昨日同刻 −18.3%. Blue twenty-day bar chart, today actual bar 12,487 plus dashed prediction extension 13,680. Dashed blue horizontal “前20日均额 17,670”, dashed amber “组件参考线 18,100”. Prediction below both lines. Legend 实际 / 预估 / 前20日均额 / 参考线. Footer “沪深 A 股 · 截至 14:35”.
+3 middle right one-third width “多空辨析”, small “AI 研究”. Large “谨慎偏空”. “多方依据：部分主线仍有资金承接”; “空方依据：成交额与市场广度偏弱”; “观察条件：放量与上涨家数同步改善”. Footer “基于13:30证据 · 13:34生成”; “查看完整辨析 →”, “重新分析”.
+4 bottom left “市场宽度”: 上涨957 red / 下跌4,177 green / 平盘80 gray, proportional bar mostly green, footer “有效样本 5,214 只”.
+5 bottom middle “涨跌停与连板”: 涨停43 red / 跌停9 green / 最高连板4板; “4板3家 · 3板1家 · 2板12家”; link “短线情绪 →”.
+6 bottom right “自选观察”: compact three-row stock table: 内蒙新华 14.63 +10.00%; 果麦文化 28.10 +3.20%; 新华传媒 7.04 −1.12%. Gains red, losses green; footer “关注列表 · 3只”.
+Each card has a subtle settings icon top right. Ordinary viewing mode, no drawer, no editing outlines. Bottom small “静态设计稿 · 所有数值均为示例”. Keep Chinese exact and legible, all six widgets fully visible, strong whitespace and aligned grid. This is only a raster design image, no actual application changes.
+
+PROMPT 2
+Edit ONLY the turnover chart inside the large "沪深量能" card of this existing static UI mockup. Preserve the entire other UI, exact “观澜” name, separate old “今日总览” sidebar entry, all card positions, typography, data values, sidebar, buttons, and colors.
+Fix chart numerical consistency: 20 historical blue bars then today's 21st bar. Historical amounts, in 亿元, left to right: 19598,18551,16466,19713,16288,16123,18387,18228,20766,20311,21351,17646,16529,17025,14089,14376,16817,19001,15373,16754. Their mean is approximately 17670. These historical bars MUST mostly cluster between 15000 and 21000, not around 10000.
+Keep y axis 0,5000,10000,15000,20000,25000 with correct geometry. Today solid saturated blue bar rises to 12487; a dashed outlined light-blue extension on THAT LAST BAR rises only to 13680, below 15000. Label the last solid top 12,487 and dashed extension top 13,680 close to their true heights. Do NOT draw any horizontal forecast line.
+Only TWO dashed horizontal reference lines across chart: blue at 17670 and amber at 18100, both between 15000 and20000 and close together. Avoid overlapping labels by using the existing chart legend below to state "前20日均额 17,670" and "组件参考线 18,100"; no large line labels colliding with bars. Use minimal x labels "前20日", "前15日", "前10日", "前5日", "昨日", "今日", instead of fabricating calendar dates.
+All other pixels and design should remain as close as possible. High fidelity screenshot-style raster design, no code.
+
+PROMPT 3
+Edit this static UI mockup with one precise correction only: remove the two small numeric annotations “13,680” and “12,487” floating at the RIGHT EDGE INSIDE the turnover CHART. Leave the four large top metric numbers, axes, bars, blue and amber guide lines, legend, sidebar and all other UI completely unchanged. No numeric callout labels inside the chart. Preserve exact page title “观澜” and separate “今日总览”.
+
+PROMPT 4
+Use the reference image as the exact design base. Create STATIC UI IMAGE 02, the new independent “观澜” page in layout EDIT mode with a right-side “组件库” drawer. Preserve EasyStock visual style, exact “观澜” title, and separate old “今日总览” navigation item above it. No actual code or interaction.
+Landscape 2048x1360 screenshot-like flat polished UI, readable Chinese. Keep same white/light-gray palette and sidebar. Top page toolbar becomes “编辑布局” with hint “拖动标题栏调整位置，拖动边角调整大小”; right actions “恢复默认”, “取消”, blue “保存布局”. Header small “设计稿 · 示例数据”.
+Existing six widgets remain on the main canvas. Put subtle dashed blue edit borders around cards and six-dot drag handles beside card titles, small remove x and corner resize handles. Do not show drag affordances on the sidebar. No giant arrows or developer annotations. Chart remains mock data, no small 13,680 or12,487 labels inside chart, top metric values unchanged.
+At the right, an opaque white drawer begins BELOW the toolbar, covers the rightmost part of canvas, width about420px, subtle left border. Header “组件库” with x close. Input “搜索组件”. Category tabs “全部” selected blue, “行情”, “AI 研究”, “关注”. Eight compact component tiles arranged in two columns, each has a miniature content preview, title and action:
+“沪深量能” tag 行情, state 已添加;
+“指数参照” tag 行情, 已添加;
+“市场宽度” tag 行情, 已添加;
+“涨跌停与连板” tag 行情, 已添加;
+“多空辨析” tag AI研究, 已添加;
+“核心主线” tag 行情, blue “+ 添加”;
+“自选观察” tag 关注, 已添加;
+“持仓风险” tag AI研究, blue “+ 添加”.
+Bottom drawer note “点击添加，或拖入看板”. Main canvas visible left should still communicate volume chart, width and short-term cards. Add a subtle dashed empty drop zone at bottom of canvas with “拖到这里添加组件”, not replacing any existing card. Never rename 今日总览. All text polished crisp Simplified Chinese, restrained product screenshot, not an infographic.
+
+PROMPT 5
+Use the reference image as the exact design base. Create STATIC UI IMAGE 03 of the new independent EasyStock “观澜” page with a right-side “组件设置” drawer opened for “沪深量能”. Preserve exact “观澜” name and separate existing “今日总览” navigation item above selected观澜. Same flat light professional style, white cards, pale gray workspace, navy text, royal blue controls, readable Chinese. Landscape 2048x1360. No code or dynamic prototype.
+Keep normal page toolbar “我的看盘台”, “添加组件”, “编辑布局”, “刷新数据”. Mark top-right “设计稿 · 示例数据”. Select volume card with a thin blue border; other cards remain in place softly muted behind the white drawer. No small numeric callout labels INSIDE the turnover chart, keep top metrics.
+White right drawer approximately440px wide, header “组件设置”, small subtitle “沪深量能”, x close. Spacious clear form with no technical jargon or secrets:
+“显示名称” input “沪深量能”.
+“展示内容” four rows with blue toggles ON: “今日已成交”, “预计全天”, “前20日均额”, “组件参考线”.
+“组件参考线” input “18,100” suffix “亿元”; note “仅影响本组件显示，不修改今日总览设置”.
+“数据范围” locked field “沪深 A 股”.
+“绑定结果” dropdown “沪深量能指标”; muted hint “统一数据服务 · 主备自动切换”.
+“更新方式” dropdown “跟随行情更新”.
+“卡片尺寸” three segmented choices “小” “中” “宽”, 宽 selected blue.
+Footer fixed row outline “取消” and primaryblue “应用设置”.
+Retain meaningful main canvas on left with volume chart and card headers visible. No modal centered in screen, no additional navigation/settings page, no chart numbers or fake performance guarantees. Correct Chinese spelling and polished field alignment.

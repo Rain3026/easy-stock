@@ -1,0 +1,35 @@
+{
+  "frontend_tests": 245,
+  "frontend_test_files": 41,
+  "go_guanlan_race_tests": 11,
+  "affected_go_full_packages": [
+    "internal/guanlan",
+    "internal/dailyresearch",
+    "internal/httpapi"
+  ],
+  "desktop_tests_passed": 64,
+  "desktop_tests_skipped": 1,
+  "typecheck_and_build": "passed",
+  "original_five_workspace_navigation": "passed",
+  "original_site_console_errors": 0,
+  "final_web_pointer_capture": "passed: outside 4->4 / inside 4->5",
+  "prior_native_drag_resize_save_restart": "passed",
+  "final_incremental_native_recheck": "passed: right drawers, pointer-capture drop 0->1, save/enable V6, restart V6",
+  "temporary_services_stopped": [
+    20075,
+    20083
+  ],
+  "original_services_retained": [
+    20073,
+    20081
+  ],
+  "git_head": "a4dcf5869b700dd87912c3566f6cf2903efbff05",
+  "git_staged_files": [],
+  "real_ai_calls_started": 0,
+  "private_test_data_imported": false,
+  "checked_at": "2026-10-15T05:47:21.717079+08:00",
+  "final_drawer_overflow_fix": "passed: native default/preset footer remains visible; inner form scrolls; Web 390px footer inside viewport",
+  "final_drawer_targeted_tests": 10,
+  "final_drawer_build": "passed",
+  "final_web_drawer_console_errors": 0
+}

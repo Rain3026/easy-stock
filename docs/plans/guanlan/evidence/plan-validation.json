@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "checked_at": "2026-10-14T23:34:53.617595+08:00",
+  "scope": "只检查规划文档与既有工作树保护；未执行应用开发或实盘/模型验收。",
+  "checks": {
+    "task_count": 30,
+    "phase_count": 7,
+    "unique_ids": true,
+    "dependencies_valid_acyclic": true,
+    "markdown_ledger_match": true,
+    "all_implementation_tasks_todo": true,
+    "start_gate": "awaiting_user_start",
+    "design_images_hash_checked": 10,
+    "existing_dirty_paths_checked": 447,
+    "existing_dirty_path_status_and_content_unchanged": true,
+    "git_branch_and_head_unchanged": true
+  },
+  "baseline_ref": "planning-baseline.json",
+  "branch": "oss-main",
+  "head": "a4dcf5869b700dd87912c3566f6cf2903efbff05",
+  "status_outside_plan_sha256": "6e60fba62657b15d221112edea6b93da7359be5635c6ab70db2c95ab089bb329",
+  "dirty_content_outside_plan_sha256": "a88a110aedb65dc1c9c3980fd4bd986220ac43612f46851f783ab348792e4553",
+  "planning_files": [
+    "README.md",
+    "TASKS.md",
+    "tasks.json",
+    "STATE.md",
+    "evidence/planning-baseline.json",
+    "evidence/plan-validation.json"
+  ],
+  "not_performed": [
+    "应用代码或依赖变更",
+    "运行服务重启",
+    "原设置或业务数据库写入",
+    "外部行情或真实AI调用",
+    "新自动调度/系统Goal",
+    "提交/推送/发布"
+  ],
+  "limitations": [
+    "本次未重新验证实时数据源，也未重新执行五工作区验收。",
+    "本证据中的文件哈希覆盖Git列出的原有变更，不表示对后台运行数据完成了新一轮业务备份或审计。"
+  ]
+}

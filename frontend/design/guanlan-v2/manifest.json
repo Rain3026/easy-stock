@@ -1,0 +1,24 @@
+{
+  "title": "观澜 V2",
+  "created_at": "2026-10-14T18:31:30.720191+08:00",
+  "type": "static_raster_design_only",
+  "status": "pending_user_review",
+  "generator": "built-in image_gen",
+  "application_code_modified": false,
+  "existing_today_overview_modified": false,
+  "files": [
+    {
+      "path": "01-component-size.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "033202917fd038acd1f4c91006bc34c36d69c110b69e92d2762b2424e5ebaa05"
+    },
+    {
+      "path": "02-component-style.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "84539ad7836401ec963587c2a24ae4315651e217e7b0bac6dd19fed019305b68"
+    }
+  ],
+  "v1_images_unchanged": true
+}

@@ -120,6 +120,28 @@ func (s *Store) Jobs(ctx context.Context) ([]Job, error) {
 	return out, rows.Err()
 }
 
+// JobsForSnapshot resolves old pinned dashboard bindings beyond the recent queue.
+func (s *Store) JobsForSnapshot(ctx context.Context, snapshotID string) ([]Job, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT payload FROM research_jobs WHERE (json_extract(CAST(payload AS TEXT),'$.snapshot_id')=? OR json_extract(CAST(payload AS TEXT),'$.debate.snapshot_id')=?) AND (json_extract(CAST(payload AS TEXT),'$.kind')='debate' OR json_type(CAST(payload AS TEXT),'$.debate')='object') ORDER BY rowid DESC LIMIT 1`, snapshotID, snapshotID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	out := []Job{}
+	for rows.Next() {
+		var raw []byte
+		var job Job
+		if err = rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		if err = json.Unmarshal(raw, &job); err != nil {
+			return nil, err
+		}
+		out = append(out, job)
+	}
+	return out, rows.Err()
+}
+
 // Append never overwrites an earlier judgement, even for the same business date.
 func (s *Store) Append(ctx context.Context, id, kind, parent string, value any) error {
 	b, e := json.Marshal(value)

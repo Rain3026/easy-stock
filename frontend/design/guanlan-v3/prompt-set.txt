@@ -1,0 +1,71 @@
+PROMPT 1
+Use case: ui-mockup. Produce a STATIC, high fidelity desktop product UI design image for the existing EasyStock “观澜” design system. Reference image is visual style and application shell only. Preserve the exact selected sidebar label “观澜” and a separate old “今日总览” entry above it. Other sidebar entries: 机会发现, 个股研究, 持仓管理, 研究中心, lower 资讯检索 / AI助手, bottom 用量与任务 / 系统设置. easy-stock brand, AI STOCK LAB. White sidebar ~220px, pale cool-gray workspace, white cards, navy text, royal blue controls, subtle gray borders, modest corners, crisp Chinese sans-serif type. Full landscape screenshot approximately1536x1024, flat front-on, no browser chrome, no perspective. Readable Simplified Chinese, no decorative artwork. Title “观澜”, subtitle “自由组合你的核心观察”; top-right “设计稿 V3 · 示例数据”. Below title two navigation tabs “我的看板” and “组件库”. This is a raster mockup only; no actual code or changes to existing app.
+Screen 01: dedicated full-width COMPONENT LIBRARY MANAGEMENT, not a small drawer. Select top tab “组件库”. Replace the old board canvas with library content.
+Main section header “组件库管理”, compact count “8 类组件 · 3 个预设 · 2 个看板”. Tabs “全部组件 8” active, “我的预设 3” inactive. Search input “搜索组件名称或用途”. Filter chips “全部 8” selected, “行情 5”, “AI研究 2”, “关注 1”. Quiet star “仅看收藏” control at right.
+Eight component cards in an aligned 4-column by2-row grid, all fully visible. Every card: small title icon, star/ellipsis top-right, miniature chart/numbers/text preview, short purpose description, category badge, use-count, buttons “默认配置” and “添加到看板”.
+Cards, in order:
+1 “沪深量能”, 行情, preview blue historical volume bars and dashed forecast, “实际成交与全天预估”, “用于 2 个看板”.
+2 “指数参照”, 行情, preview 3,862.43 −0.90% green, “支持单指数与多指数”, “用于 2 个看板”.
+3 “市场宽度”, 行情, red/green bar and957/4177/80, “涨跌平与有效样本”, “用于 1 个看板”.
+4 “涨跌停与连板”, 行情, preview43/9/4板, “涨跌停与连板梯队”, “用于 1 个看板”.
+5 “核心主线”, 行情, mini ranked list, “题材强度与持续性”, “用于 1 个看板”.
+6 “多空辨析”, AI研究, preview “谨慎偏空”, “同证据下的多方观点”, “用于 1 个看板”.
+7 “持仓风险”, AI研究, mini risk gauge (no private holdings), “查看已完成风险研究”, “用于 1 个看板”.
+8 “自选观察”, 关注, mini3-row list, “关注列表与实时行情”, “用于 2 个看板”.
+Below grid one short pale blue note “默认配置用于新添加的组件，已有看板保留原设置”. Bottom tiny “静态设计稿 · 示例数据”. Do not include buttons for installing external plugins or running arbitrary scripts. Keep all counts and categories exact and coherent.
+
+PROMPT 2
+Use case: ui-mockup. Produce a STATIC, high fidelity desktop product UI design image for the existing EasyStock “观澜” design system. Reference image is visual style and application shell only. Preserve the exact selected sidebar label “观澜” and a separate old “今日总览” entry above it. Other sidebar entries: 机会发现, 个股研究, 持仓管理, 研究中心, lower 资讯检索 / AI助手, bottom 用量与任务 / 系统设置. easy-stock brand, AI STOCK LAB. White sidebar ~220px, pale cool-gray workspace, white cards, navy text, royal blue controls, subtle gray borders, modest corners, crisp Chinese sans-serif type. Full landscape screenshot approximately1536x1024, flat front-on, no browser chrome, no perspective. Readable Simplified Chinese, no decorative artwork. Title “观澜”, subtitle “自由组合你的核心观察”; top-right “设计稿 V3 · 示例数据”. Below title two navigation tabs “我的看板” and “组件库”. This is a raster mockup only; no actual code or changes to existing app.
+Screen02: INDEX SELECTION AND SAVED PRESET CONFIGURATION. Select top tab “组件库”. Breadcrumb “组件库 / 指数参照 / 新建预设”. Main heading “指数参照 · 参数配置”, secondary “同一组件，可显示一个或多个指数”.
+Main content in two white panels: broad left configuration panel, narrower right live design preview panel.
+Left section “选择指数”, search “搜索指数名称或代码”, small “已选 1 项”. Eight checkbox option tiles in two columns:
+上证指数 000001.SH unchecked
+深证成指 399001.SZ unchecked
+创业板指 399006.SZ CHECKED royal blue
+沪深300 000300.SH unchecked
+中证1000 000852.SH unchecked
+科创50 000688.SH unchecked
+恒生指数 HSI unchecked
+纳指100 NDX unchecked.
+Below a selected pill “创业板指 ×”.
+Section “显示形式”, segmented “单指数卡” selected blue / “横向排列” / “列表”.
+Section “显示字段”, checked “最新点位”, checked “涨跌幅”, checked “更新时间”.
+Section “保存为预设”: field label “预设名称”, input “创业板观察”; small note “预设保存配置，行情随数据更新”.
+Right panel title “组件预览”, a refined single-index card titled “创业板观察”, small “创业板指 · 399006.SZ”, huge navy2,745.21, green “−3.10%”, “行情截至 14:35”. Gear icon and slight blue selection border.
+Below preview “添加到看板” dropdown “盘中看盘 ▾”.
+Below quiet note “仅用于观澜，不修改今日总览与已有卡片”.
+Bottom action row “取消”, outline “保存预设”, primary blue “保存并添加到看板”.
+Do not overcrowd. The single selected index and single-card preview must be unmistakable; no automatic AI analysis controls. Financial numbers are example values, not real-time claims.
+
+PROMPT 3
+Use case: ui-mockup. Produce a STATIC, high fidelity desktop product UI design image for the existing EasyStock “观澜” design system. Reference image is visual style and application shell only. Preserve the exact selected sidebar label “观澜” and a separate old “今日总览” entry above it. Other sidebar entries: 机会发现, 个股研究, 持仓管理, 研究中心, lower 资讯检索 / AI助手, bottom 用量与任务 / 系统设置. easy-stock brand, AI STOCK LAB. White sidebar ~220px, pale cool-gray workspace, white cards, navy text, royal blue controls, subtle gray borders, modest corners, crisp Chinese sans-serif type. Full landscape screenshot approximately1536x1024, flat front-on, no browser chrome, no perspective. Readable Simplified Chinese, no decorative artwork. Title “观澜”, subtitle “自由组合你的核心观察”; top-right “设计稿 V3 · 示例数据”. Below title two navigation tabs “我的看板” and “组件库”. This is a raster mockup only; no actual code or changes to existing app.
+Screen03: MULTIPLE BOARDS MANAGEMENT with a CREATE BOARD side panel. Select top tab “我的看板”. Main heading “我的看板”, compact count “2 个看板”. Supporting line “不同场景，各自保存组件与布局”. Top-right button “+ 新建看板”.
+Main area left of drawer shows TWO board cards side-by-side (not full dashboards). Each card has a miniature readable board preview, board name, component count and short description, small ellipsis menu for management.
+First card “盘中看盘”, blue “默认” badge and small “当前使用” badge; “6 个组件”; description “量能、宽度、情绪与关注列表”. Its thumbnail has slimindex row, bigblue volume bars, AI summary and three small bottom cards. Bottom buttons “打开看板” and “复制”.
+Second card “盘后研究”, “5 个组件”; description “研究结论、主线与风险观察”. Thumbnail distinctly different arrangement: AI summary large on left, themeslist right, twoindex/risk cards below. Bottom primary outline “切换到此看板” and “复制”. Small secondary “重命名” action on each card or in visible quiet action row.
+At right opaque white CREATE BOARD panel about400px. Header “新建看板”, close x.
+“看板名称” input “创业板观察台”.
+“创建方式” two selectable tiles:
+“空白看板” unselected with emptygrid icon;
+“复制已有看板” selected blue with copy icon.
+“来源看板” dropdown “盘中看盘 ▾”.
+Checked options “复制组件参数”, “复制尺寸与样式”.
+“设为默认看板” toggle OFF.
+Pale blue note “仅复制布局和配置，不重复取数或启动AI分析”.
+Bottom fixed buttons outline “取消”, primaryblue “创建并打开”.
+Main below board cards a calm informational line “保存布局原地生效 · 刷新行情独立操作”. Footer “静态设计稿 · 示例数据”.
+No centered modal, no duplicate code projects, no real holdings. Clearly communicate independent multiple boards, creation from blank or copy, switching and default selection. Keep old 今日总览 entry separate and unchanged.
+
+PROMPT 4
+Precisely edit this static EasyStock “观澜” V3 COMPONENT LIBRARY image. Preserve all existing UI, cards, content, layout, fonts and sidebar. Make only these small corrections:
+1. Add a clearly clickable outlined button “我的预设 3 →” in the upper-right of the “组件库管理” HEADER ROW, aligned with the heading and count line, ABOVE the search/filter row. It must be separate from category filters and visible, providing the entry to saved preset management. Do not cover text or add a new side panel.
+2. In “沪深量能” card change usage caption to “用于 1 个看板”.
+3. In “多空辨析” card change usage caption to “用于 2 个看板”.
+4. In “自选观察” card change usage caption to “用于 1 个看板”.
+All other usage counts stay the same: index2, width1, limits1, themes1, risk1. Overall remains exactly8types,3presets,2boards. These correspond to a six-widget intraday board and four-widget research board. Keep every other pixel as close as possible, especially exact “观澜” and separate “今日总览”.
+
+PROMPT 5
+Precisely edit this static EasyStock “观澜” V3 MULTIPLE BOARDS image. Make ONE text-only correction: in the “盘后研究” card, change “5 个组件” to “4 个组件”, because its thumbnail contains four components: AI研究结论,核心主线,指数表现,风险观察. Preserve the first board “盘中看盘” as6components, all UI geometry, previews, creation form, names, buttons, colors and all other text unchanged. Do not add or remove any cards. Exact page “观澜” and separate “今日总览” remain unchanged.
+
+PROMPT 6
+Make ONE tiny text correction in this UI image. In the FIRST CARD, TOP LEFT, titled “沪深量能”, there is a gray usage caption underneath its chart and above its buttons, reading “用于 2 个看板”. Change ONLY THAT caption to “用于 1 个看板”. Specifically replace its digit 2 with 1. Preserve the “指数参照” card's “用于 2 个看板” and “多空辨析” card's “用于 2 个看板”. Keep the “我的预设 3 →” header button, all other content and all layout unchanged. No other edits.

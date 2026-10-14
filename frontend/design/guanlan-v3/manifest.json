@@ -1,0 +1,56 @@
+{
+  "title": "观澜 V3",
+  "created_at": "2026-10-14T22:31:44.786393+08:00",
+  "type": "static_raster_design_only",
+  "status": "pending_user_review",
+  "generator": "built-in image_gen",
+  "application_code_modified": false,
+  "existing_today_overview_modified": false,
+  "files": [
+    {
+      "path": "01-component-library.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "79168c583bf7f50f554f5f591fe8bdcccfd6fa28a09b1b571d1093f6a491fbd2"
+    },
+    {
+      "path": "02-index-presets.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "2d135f8740237bdc1fea6cff9695237167d8b6db9f72464cc53da05340ae9e6d"
+    },
+    {
+      "path": "03-multiple-boards.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "aa294fba71eedf94e66327406d411f2b47d746cd84e13b00351b0e1dc82c3038"
+    }
+  ],
+  "prior_design_images_unchanged": true,
+  "example_boards": {
+    "盘中看盘": [
+      "指数参照",
+      "沪深量能",
+      "多空辨析",
+      "市场宽度",
+      "涨跌停与连板",
+      "自选观察"
+    ],
+    "盘后研究": [
+      "多空辨析",
+      "核心主线",
+      "指数参照",
+      "持仓风险"
+    ]
+  },
+  "component_usage": {
+    "指数参照": 2,
+    "沪深量能": 1,
+    "多空辨析": 2,
+    "市场宽度": 1,
+    "涨跌停与连板": 1,
+    "自选观察": 1,
+    "核心主线": 1,
+    "持仓风险": 1
+  }
+}

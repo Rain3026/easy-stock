@@ -1,0 +1,35 @@
+{
+  "title": "观澜单页面与配置版本设计",
+  "created_at": "2026-10-14T23:12:27.212166+08:00",
+  "type": "static_raster_design_only",
+  "status": "pending_user_review",
+  "generator": "built-in image_gen",
+  "application_code_modified": false,
+  "existing_today_overview_modified": false,
+  "usage_pages": 1,
+  "configuration_versioning": true,
+  "records_per_page": 2,
+  "component_library_dragging": true,
+  "supersedes": "guanlan-final-v1 multiple independent boards model",
+  "files": [
+    {
+      "path": "01-config-version-list.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "fcb0fbc1b7c604025d044b1f67c333cad497a5874c7a677535ddfb9751ba3289"
+    },
+    {
+      "path": "02-create-config-version.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "5c0313a2801d81722991cede64f5dd1272c2ed9896a54a2408c5706e2c143fd5"
+    },
+    {
+      "path": "03-drag-component-editor.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "b272f1fddea475b32a933281e55b7027fb45e2de528005da954529ef17ace7fa"
+    }
+  ],
+  "prior_design_images_unchanged": 13
+}

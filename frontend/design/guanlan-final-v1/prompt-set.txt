@@ -1,0 +1,52 @@
+SCREEN 1
+Use case: ui-mockup, high fidelity STATIC raster UI design. Reorganize the reference EasyStock design according to a strict separation of viewing and management. Flat landscape1536x1024, crisp readable Simplified Chinese, same white/pale-gray cards, navy type, restrained royalblue accents, small rounded corners, line icons. No code and no interactive prototype.
+The sidebar ALWAYS contains existing “今日总览”, separate “观澜”, “机会发现”, “个股研究”, “持仓管理”, “研究中心”, lower “资讯检索”, “AI助手”. Its bottom utility group must contain THREE separate sibling menu items, in THIS order: “用量与任务”, “看板与组件”, “系统设置”. Exact new text is “看板与组件”, and it sits IMMEDIATELY ABOVE “系统设置”, not nested inside it. Preserve easy-stock / AI STOCK LAB branding. Main top-right small “最终设计稿 · 示例数据”. All market numbers are illustrative.
+SCREEN01: normal application viewing page. Use the reference dashboard as base and retain all six existing widgets, quantities, graph and main arrangement.
+Select “观澜” blue in upper sidebar; new bottom “看板与组件” is visible but UNSELECTED.
+Main title remains “观澜”; subtitle change to “聚焦市场，查看你的看板”.
+Top toolbar: current board selector “盘中看盘 ▾”, muted “6 个组件”, right only “刷新行情”. Secondary time line “行情截至14:35 · AI证据截至13:30”.
+CRITICAL: REMOVE the “添加组件” and “编辑布局” buttons completely. No “我的看板/组件库” navigation tabs here. REMOVE every card settingsgear icon and all resize or delete handles. This is VIEWING ONLY.
+Keep functional links for detailed research like “查看完整辨析 →”, “短线情绪 →”, and stocks. Replace “重新分析” with quiet “前往研究中心 →”; no analysis is auto started. Keep graph numbers and source/evidence timestamps.
+Bottom tiny note “静态设计稿 · 配置管理请进入看板与组件”.
+The important visual contrast is selected upper观澜 for usage, with separate bottom management menu. Do not put management tools back into this page.
+
+SCREEN 2
+Use case: ui-mockup, high fidelity STATIC raster UI design. Reorganize the reference EasyStock design according to a strict separation of viewing and management. Flat landscape1536x1024, crisp readable Simplified Chinese, same white/pale-gray cards, navy type, restrained royalblue accents, small rounded corners, line icons. No code and no interactive prototype.
+The sidebar ALWAYS contains existing “今日总览”, separate “观澜”, “机会发现”, “个股研究”, “持仓管理”, “研究中心”, lower “资讯检索”, “AI助手”. Its bottom utility group must contain THREE separate sibling menu items, in THIS order: “用量与任务”, “看板与组件”, “系统设置”. Exact new text is “看板与组件”, and it sits IMMEDIATELY ABOVE “系统设置”, not nested inside it. Preserve easy-stock / AI STOCK LAB branding. Main top-right small “最终设计稿 · 示例数据”. All market numbers are illustrative.
+SCREEN02: independent management page, “我的看板” tab. Use the reference multiple-board-management screenshot as base.
+CLEAR the old blue selection from upper “观澜”. Select ONLY bottom “看板与组件” blue. Top main title must become “看板与组件”; subtitle “管理看板布局、组件与预设”. Two horizontal tabs exactly “我的看板” SELECTED blue underline and “组件库” unselected.
+Preserve two board cards and the create-board right panel. Names/counts must remain “盘中看盘 ·6个组件” and “盘后研究 ·4个组件”. Firstboard default/current badges. Existing miniature previews unchanged.
+Each card has primary “编辑看板”, secondary “在观澜打开”, and small “复制”/ellipsis management actions. New board remains “+新建看板”. Create panel title “新建看板”, name “创业板观察台”, empty/copy choice, source “盘中看盘”, copy parameters/styles checkbox, defaulttoggleoff, buttons “取消” “创建并编辑”.
+Small note “先配置再使用 · 保存后观澜读取新布局”. No forced fullpage reload. Copy/new-board do not start AI analysis. Keep bottom system settings sibling menu correct and visible.
+
+SCREEN 3
+Use case: ui-mockup, high fidelity STATIC raster UI design. Reorganize the reference EasyStock design according to a strict separation of viewing and management. Flat landscape1536x1024, crisp readable Simplified Chinese, same white/pale-gray cards, navy type, restrained royalblue accents, small rounded corners, line icons. No code and no interactive prototype.
+The sidebar ALWAYS contains existing “今日总览”, separate “观澜”, “机会发现”, “个股研究”, “持仓管理”, “研究中心”, lower “资讯检索”, “AI助手”. Its bottom utility group must contain THREE separate sibling menu items, in THIS order: “用量与任务”, “看板与组件”, “系统设置”. Exact new text is “看板与组件”, and it sits IMMEDIATELY ABOVE “系统设置”, not nested inside it. Preserve easy-stock / AI STOCK LAB branding. Main top-right small “最终设计稿 · 示例数据”. All market numbers are illustrative.
+SCREEN03: board layout and widget style EDITOR inside the independent management page. Use the reference typography-panel image as style base.
+Upper sidebar “观澜” UNSELECTED. Bottom “看板与组件” SELECTED blue. Main title “看板与组件”, subtitle “管理看板布局、组件与预设”. Two horizontal tabs “我的看板” selected with blue underline, “组件库” unselected. Breadcrumb below “我的看板 / 盘中看盘 / 编辑布局”.
+Top editor toolbar left “盘中看盘”, hint “标题栏移动 · 边框调整宽高”; right buttons “添加组件”, “取消”, primary “保存看板”. Do not title this editing page观澜.
+Main canvas shows compactindex row, volume card and other existing sample cards. The “沪深量能” card is selected by a BLUE border with EIGHT obvious square resizing handles: corners and side midpoints. Small size badge “760 ×420px”. Title draghandle. Preserve chart and numbers, no random new data.
+Right panel header “当前组件 · 沪深量能”; tabs “数据”“尺寸”“样式”, 样式 SELECTEDblue. Form retains reference controls: 标题文字沪深量能; 标题字号18px; 数据字号36px; 说明字号12px; 标题栏高度44px; 图表高度220px; 内部留白12px; 内容密度紧凑/标准/宽松; 标题对齐左对齐/居中; 随卡片自动重排toggleon; smalltypepreview13,680. At bottom note “仅修改当前看板中的组件”. Bottom actions “恢复默认”, “应用到草稿”.
+Keep controls readable and all within screen, compact spacing if needed. Editing, font and free-size capabilities live HERE in management, not in观澜 usage page. Data parameters and width/height controls are accessible by the neighboring数据/尺寸tabs.
+
+SCREEN 4
+Use case: ui-mockup, high fidelity STATIC raster UI design. Reorganize the reference EasyStock design according to a strict separation of viewing and management. Flat landscape1536x1024, crisp readable Simplified Chinese, same white/pale-gray cards, navy type, restrained royalblue accents, small rounded corners, line icons. No code and no interactive prototype.
+The sidebar ALWAYS contains existing “今日总览”, separate “观澜”, “机会发现”, “个股研究”, “持仓管理”, “研究中心”, lower “资讯检索”, “AI助手”. Its bottom utility group must contain THREE separate sibling menu items, in THIS order: “用量与任务”, “看板与组件”, “系统设置”. Exact new text is “看板与组件”, and it sits IMMEDIATELY ABOVE “系统设置”, not nested inside it. Preserve easy-stock / AI STOCK LAB branding. Main top-right small “最终设计稿 · 示例数据”. All market numbers are illustrative.
+SCREEN04: independent COMPONENT LIBRARY MANAGEMENT.
+Use reference library screenshot; preserve all eight component cards, category filters, search, preview data, names, usagecounts and header “我的预设3→” button.
+Upper sidebar “观澜” must be UNSELECTED. Bottom “看板与组件” SELECTEDblue.
+Replace main title观澜 with exact “看板与组件”, subtitle “管理看板布局、组件与预设”. Two horizontal tabs “我的看板” unselected and “组件库” selected with blue underline.
+Retain content heading “组件库管理”, counts “8类组件 ·3个预设 ·2个看板”. Cards exactly沪深量能,指数参照,市场宽度,涨跌停与连板,核心主线,多空辨析,持仓风险,自选观察. All categories and use-counts remain from reference (volume1,index2,width1,limits1,themes1,debate2,risk1,watchlist1). Each has “默认配置” and “添加到看板”.
+Keep footer rule “默认配置用于新添加的组件，已有看板保留原设置”.
+This entire management library must belong to selected底部看板与组件, not观澜, and not系统设置.
+
+SCREEN 5
+Use case: ui-mockup, high fidelity STATIC raster UI design. Reorganize the reference EasyStock design according to a strict separation of viewing and management. Flat landscape1536x1024, crisp readable Simplified Chinese, same white/pale-gray cards, navy type, restrained royalblue accents, small rounded corners, line icons. No code and no interactive prototype.
+The sidebar ALWAYS contains existing “今日总览”, separate “观澜”, “机会发现”, “个股研究”, “持仓管理”, “研究中心”, lower “资讯检索”, “AI助手”. Its bottom utility group must contain THREE separate sibling menu items, in THIS order: “用量与任务”, “看板与组件”, “系统设置”. Exact new text is “看板与组件”, and it sits IMMEDIATELY ABOVE “系统设置”, not nested inside it. Preserve easy-stock / AI STOCK LAB branding. Main top-right small “最终设计稿 · 示例数据”. All market numbers are illustrative.
+SCREEN05: INDEX PARAMETERS AND SAVED PRESET SETTINGS within independent management.
+Use reference index-preset screen; preserve all checkbox options, selected创业板指399006.SZ, single-indexpreview2745.21−3.10%, names and form controls.
+Upper sidebar观澜 UNSELECTED. New bottom看板与组件 SELECTEDblue.
+Main title changes to “看板与组件”, subtitle “管理看板布局、组件与预设”. Horizontal tabs 我的看板 unselected / 组件库 selected with blue underline.
+Breadcrumb “组件库 / 指数参照 / 新建预设”. Heading “指数参照 · 参数配置”.
+Keep “选择指数” and 已选1项, singlecard/horizontal/list display choices, checked最新点位/涨跌幅/更新时间, presetname创业板观察, targetboard盘中看盘. Buttons “取消”, “保存预设”, “保存并添加到看板”. Note “预设保存配置，已有组件保持原设置”.
+All form editing belongs to the independent管理page; usage page观澜 only receives configured components. No new arbitrary API controls or AI execution.

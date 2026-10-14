@@ -1,0 +1,42 @@
+{
+  "settings_unchanged": true,
+  "database_comparison": {
+    "daily-research.db": {
+      "unchanged": true,
+      "changes": []
+    },
+    "portfolio-inspections.db": {
+      "unchanged": true,
+      "changes": []
+    },
+    "reviews.db": {
+      "unchanged": true,
+      "changes": []
+    },
+    "theme-radar.db": {
+      "unchanged": true,
+      "changes": []
+    },
+    "market-emotion.db": {
+      "unchanged": true,
+      "changes": []
+    },
+    "stock-research.db": {
+      "unchanged": true,
+      "changes": []
+    }
+  },
+  "active_jobs": 0,
+  "modified_baseline_paths": [
+    "backend/internal/httpapi/config.go",
+    "backend/internal/httpapi/server.go",
+    "frontend/src/App.tsx",
+    "backend/internal/dailyresearch/store.go",
+    "docs/plans/guanlan/STATE.md",
+    "docs/plans/guanlan/TASKS.md",
+    "docs/plans/guanlan/tasks.json",
+    "frontend/src/lib/workspaces.ts"
+  ],
+  "api_status": 200,
+  "preexisting_deletion_preserved": "frontend/src/components/SettingsDrawer.tsx"
+}

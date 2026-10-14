@@ -1,0 +1,82 @@
+{
+  "settings_unchanged": true,
+  "business_tables": {
+    "daily-research.db": {
+      "all_unchanged": true,
+      "changes": []
+    },
+    "portfolio-inspections.db": {
+      "all_unchanged": true,
+      "changes": []
+    },
+    "reviews.db": {
+      "all_unchanged": true,
+      "changes": []
+    },
+    "theme-radar.db": {
+      "all_unchanged": false,
+      "changes": [
+        {
+          "table": "theme_overview_cache",
+          "before": 1,
+          "after": 1
+        },
+        {
+          "table": "duanxianxia_snapshots",
+          "before": 6,
+          "after": 7
+        },
+        {
+          "table": "duanxianxia_limit_up_snapshots",
+          "before": 6,
+          "after": 6
+        },
+        {
+          "table": "duanxianxia_sync_state",
+          "before": 1,
+          "after": 1
+        }
+      ]
+    },
+    "market-emotion.db": {
+      "all_unchanged": true,
+      "changes": []
+    },
+    "stock-research.db": {
+      "all_unchanged": true,
+      "changes": []
+    }
+  },
+  "token_usage_unchanged_since_local_update": true,
+  "daily_environment_test_data_imported": false,
+  "cached_timings_ms": {
+    "original_overview": {
+      "ms": 2.12,
+      "status": 200,
+      "bytes": 29938
+    },
+    "guanlan_state": {
+      "ms": 5.15,
+      "status": 200,
+      "bytes": 139
+    },
+    "guanlan_catalog": {
+      "ms": 1.21,
+      "status": 200,
+      "bytes": 4828
+    }
+  },
+  "changed_baseline_paths": [
+    "backend/internal/httpapi/config.go",
+    "backend/internal/httpapi/server.go",
+    "frontend/src/App.tsx",
+    "backend/internal/dailyresearch/store.go",
+    "docs/plans/guanlan/STATE.md",
+    "docs/plans/guanlan/TASKS.md",
+    "docs/plans/guanlan/tasks.json",
+    "frontend/src/lib/workspaces.ts"
+  ],
+  "branch": "oss-main",
+  "head": "a4dcf5869b700dd87912c3566f6cf2903efbff05",
+  "original_daily_overview_source_unchanged": true
+}

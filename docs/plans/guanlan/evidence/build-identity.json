@@ -1,0 +1,10 @@
+{
+  "frontend_index_sha256": "291bec75bf99e4f7f8f7dee2ec50f048bd152cd10ad007469bc9f987757c00ba",
+  "resource_frontend_index_sha256": "291bec75bf99e4f7f8f7dee2ec50f048bd152cd10ad007469bc9f987757c00ba",
+  "backend_sha256": "5ea57e7268f650ffd09a70d1db2ef7c6ee12f7de74b2f4328f83fecef510db30",
+  "dev_backend_sha256": "5ea57e7268f650ffd09a70d1db2ef7c6ee12f7de74b2f4328f83fecef510db30",
+  "local_web": "http://127.0.0.1:20073",
+  "backend": "http://127.0.0.1:20081",
+  "global_install_replaced": false,
+  "release_or_push_performed": false
+}

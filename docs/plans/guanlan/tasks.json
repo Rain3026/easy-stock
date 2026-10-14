@@ -1,0 +1,977 @@
+{
+  "schema_version": 1,
+  "plan_id": "guanlan",
+  "title": "观澜与看板组件长期开发清单",
+  "created_at": "2026-10-14T23:21:53.014249+08:00",
+  "updated_at": "2026-10-15T05:47:21.777846+08:00",
+  "status": "complete",
+  "authorization": {
+    "design_direction_accepted": true,
+    "planning_authorized": true,
+    "implementation_authorized": true,
+    "required_start_signal": "用户明确说“开工”或同义开始指令",
+    "automatic_commits_or_pushes": false,
+    "real_ai_calls": false,
+    "start_instruction": "用户明确指令：开工",
+    "execution_order_instruction": "先组件库、我的看板和编辑配置，后观澜展示"
+  },
+  "baseline_ref": "evidence/planning-baseline.json",
+  "design_primary": "frontend/design/guanlan-config-versions-v1",
+  "next_task": null,
+  "total_tasks": 30,
+  "phases": [
+    {
+      "id": "P0",
+      "title": "保护基线与实现合同",
+      "range": "GL-001、GL-002、GL-003",
+      "outcome": "备份可恢复、合同固定、布局方案验证。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    },
+    {
+      "id": "P1",
+      "title": "配置版本与组件存储",
+      "range": "GL-004、GL-005、GL-006",
+      "outcome": "草稿、版本、启用指针与预设独立存储。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    },
+    {
+      "id": "P2",
+      "title": "八类组件与数据能力",
+      "range": "GL-008、GL-009、GL-010、GL-011、GL-012",
+      "outcome": "先完成八类组件和共享数据适配。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    },
+    {
+      "id": "P3",
+      "title": "布局编辑器",
+      "range": "GL-013、GL-014、GL-015、GL-016、GL-017",
+      "outcome": "拖入、移动缩放、样式设置与保存链路可用。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    },
+    {
+      "id": "P4",
+      "title": "我的看板与配置历史",
+      "range": "GL-018、GL-019、GL-021",
+      "outcome": "两条/页，新建复制、预览及归档恢复。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    },
+    {
+      "id": "P5",
+      "title": "组件库与观澜联动",
+      "range": "GL-022、GL-023、GL-024、GL-025、GL-007、GL-020",
+      "outcome": "组件库/预设齐备后接通观澜与显式启用。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    },
+    {
+      "id": "P6",
+      "title": "整体验收与交付",
+      "range": "GL-026、GL-027、GL-028、GL-029、GL-030",
+      "outcome": "Web/桌面实际验收，数据保护与效率核对，完成交付。",
+      "notify_on_completion": true,
+      "notification": "说明完成行为、验证证据、遗留缺口和下一阶段；开工后普通阶段不再次请求批准。"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "GL-001",
+      "phase": "P0",
+      "title": "建立保护与恢复基线",
+      "status": "done",
+      "depends_on": [],
+      "areas": [
+        "本地保护与恢复",
+        "现有工作树及运行环境"
+      ],
+      "deliverables": [
+        "开工时重新核对AGENTS.md、Git、运行进程、五工作区状态及本计划；保存本次涉及的既有改动清单。",
+        "在受保护本地位置备份设置、浏览器本地方案、相关SQLite一致性副本和受影响文件，记录恢复方式；备份不加入Git。"
+      ],
+      "acceptance": [
+        "已有未提交改动、持仓、研究和设置可定位并恢复；不使用reset/clean/stash批量覆盖工作树。",
+        "备份有效性和原业务记录基线有证据；活跃后台任务/采样与后续验收实例隔离。"
+      ],
+      "evidence": [
+        "evidence/GL-001-backup.json"
+      ],
+      "blocker": null,
+      "progress_note": "Protected backup created; six SQLite consistency/integrity checks passed; browser plans/draft preserved."
+    },
+    {
+      "id": "GL-002",
+      "phase": "P0",
+      "title": "固定页面关系、配置模型与八类组件合同",
+      "status": "done",
+      "depends_on": [
+        "GL-001"
+      ],
+      "areas": [
+        "页面关系",
+        "前后端类型与数据映射"
+      ],
+      "deliverables": [
+        "固定最新设计优先级、页面/入口、空状态及一页多配置版本状态机。",
+        "定义配置版本、草稿、启用指针、组件实例、组件类型、默认参数、预设及结果绑定合同；记录8类组件到现有接口的字段映射。"
+      ],
+      "acceptance": [
+        "一个观澜使用页面，同一时刻仅一个启用版本；选中、预览、保存、启用四种动作语义清楚。",
+        "配置历史不等于行情/研究历史；组件绑定使用受支持能力标识，不存凭据，不允许任意执行脚本或MCP命令。",
+        "明确类型/实例/预设的schema版本、缺字段与过期状态；逐字段说明真实可用、已有结果可用、待验证和缺失。"
+      ],
+      "evidence": [
+        "CONTRACT.md"
+      ],
+      "blocker": null,
+      "progress_note": "Page, storage, version state and eight component data contracts fixed from current code."
+    },
+    {
+      "id": "GL-003",
+      "phase": "P0",
+      "title": "验证拖拽和缩放实现方案",
+      "status": "done",
+      "depends_on": [
+        "GL-001",
+        "GL-002"
+      ],
+      "areas": [
+        "前端布局方案",
+        "依赖兼容性"
+      ],
+      "deliverables": [
+        "比较项目内可复用能力与成熟布局库，完成小范围隔离验证；开工后才选择和安装必要依赖。",
+        "验证React19、Electron、容器ResizeObserver、八方向缩放、重复实例、数值尺寸及窄屏降级。"
+      ],
+      "acceptance": [
+        "确认组件最小可读尺寸、边界碰撞、网格吸附和响应式规则可实现；不以静态截图替代操作验证。",
+        "支持点击添加及键盘/数值操作替代拖动；记录依赖许可、维护状态与兼容结果，仅引入实际需要的能力。"
+      ],
+      "evidence": [
+        "evidence/GL-003-layout-probe.json",
+        "evidence/GL-003-layout-adapter.json"
+      ],
+      "blocker": null,
+      "progress_note": "React19 browser and native Electron prototype verified; last constrained resize snapshot fixes stale stop callbacks. Full-app checks remain in P6."
+    },
+    {
+      "id": "GL-004",
+      "phase": "P1",
+      "title": "实现独立配置存储与草稿",
+      "status": "done",
+      "depends_on": [
+        "GL-002"
+      ],
+      "areas": [
+        "后端配置Store",
+        "隔离SQLite"
+      ],
+      "deliverables": [
+        "新增隔离的本地看板配置存储，提供schema版本、幂等初始化、草稿和事务；沿用项目DataDir规则。",
+        "设置持久化草稿、修改标记、恢复/丢弃规则，不把布局写进旧研究记录或持仓方案。"
+      ],
+      "acceptance": [
+        "空库、重复初始化、重启恢复、旧schema兼容均有隔离数据库验证；初始化不覆盖任何旧值。",
+        "草稿包含实例参数/布局/样式，未保存草稿不影响启用版本；原设置与业务数据不被迁移或复制成第二份事实。"
+      ],
+      "evidence": [
+        "evidence/GL-004-006-store-checks.json"
+      ],
+      "blocker": null,
+      "progress_note": "Isolated SQLite initialization/restart and draft storage passed."
+    },
+    {
+      "id": "GL-005",
+      "phase": "P1",
+      "title": "实现版本、复制和原子启用接口",
+      "status": "done",
+      "depends_on": [
+        "GL-004"
+      ],
+      "areas": [
+        "后端HTTP API",
+        "版本状态机"
+      ],
+      "deliverables": [
+        "提供版本分页/详情、草稿创建和复制、保存新版本、保存并启用、独立启用以及元数据管理接口。",
+        "以事务及expected_revision保护版本号分配和启用指针；同类实例拥有独立ID，复制生成新实例ID。"
+      ],
+      "acceptance": [
+        "保存始终新增不可变配置；保存并启用失败时不能留下半完成的启用状态。",
+        "双窗口冲突不静默覆盖；重试不意外重复创建版本；输入尺寸/参数/实例数有合理校验。",
+        "复制可分别选择参数与尺寸样式，未选择部分按当前已验证默认值初始化；原版本和原研究记录不变。"
+      ],
+      "evidence": [
+        "evidence/GL-004-006-store-checks.json"
+      ],
+      "blocker": null,
+      "progress_note": "Immutable versions, idempotent save, activation transaction and conflicts passed."
+    },
+    {
+      "id": "GL-006",
+      "phase": "P1",
+      "title": "实现组件目录、默认参数与预设接口",
+      "status": "done",
+      "depends_on": [
+        "GL-002",
+        "GL-004"
+      ],
+      "areas": [
+        "组件注册清单",
+        "偏好及预设Store/API"
+      ],
+      "deliverables": [
+        "建立8类组件注册清单及配置schema，提供分类、显示能力、默认值和版本信息。",
+        "提供收藏/隐藏、用户默认参数、预设及配置版本引用查询存储/API，引用查询按版本计。"
+      ],
+      "acceptance": [
+        "独立库和编辑器读同一份注册合同；隐藏只影响添加列表，不破坏旧版本渲染。",
+        "默认/预设在创建实例时复制；后续修改或删除预设不追改已有版本。",
+        "预设只保存配置，不保存行情、模型凭据、持仓事实或历史AI结论。"
+      ],
+      "evidence": [
+        "evidence/GL-004-006-store-checks.json"
+      ],
+      "blocker": null,
+      "progress_note": "Eight-type catalog, preferences/presets/references APIs and isolation passed."
+    },
+    {
+      "id": "GL-008",
+      "phase": "P2",
+      "title": "建立共享数据读取与结果绑定层",
+      "status": "done",
+      "depends_on": [
+        "GL-002",
+        "GL-006"
+      ],
+      "areas": [
+        "数据适配层",
+        "缓存订阅与请求去重"
+      ],
+      "deliverables": [
+        "复用现有overview/datahub/provider缓存及研究结果，按能力和参数合并请求，独立维护每类组件加载状态。",
+        "定义事实/规则/Agent三类结果的来源、业务日期、截止时间、缓存、缺口及错误展示；仅可见页面按既有节奏更新。"
+      ],
+      "acceptance": [
+        "同口径重复组件共享数据请求，慢AI结果或单个源失败不阻塞其他组件；切换配置和乱序响应不串数据。",
+        "布局操作不主动强制重采行情，不启动AI任务；新增或切换数据对象时允许按能力/参数共享必要读请求，缓存缺失沿用原服务有界补取，显式刷新与布局保存分开。",
+        "直接查询、规则计算和Skill/Agent已保存结果区分明确；无结果不自动运行付费分析。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-009",
+      "phase": "P2",
+      "title": "接入沪深量能和市场宽度组件",
+      "status": "done",
+      "depends_on": [
+        "GL-008"
+      ],
+      "areas": [
+        "量能组件",
+        "宽度组件",
+        "现有marketpulse"
+      ],
+      "deliverables": [
+        "实现沪深量柱、实际/预计额、前20日均额及实例显示参考线；宽度实现涨跌平及占比。",
+        "复用已落地的主备切换、金额单位、分钟完整性、预测保护与数据状态，不另写预测算法。"
+      ],
+      "acceptance": [
+        "交易日、实际/预测、源时间和缺段分别可见；无真实预测数据时明确缺失，不回填示例值。",
+        "实例参考线只影响此组件显示，不能改写原今日总览规则观察线；市场判断仍按现有确定性规则。",
+        "ES5-004/041未完的真实多日验收明确继承；布局测试不把这些缺口标为已通过。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-010",
+      "phase": "P2",
+      "title": "接入指数、涨跌停连板及核心主线组件",
+      "status": "done",
+      "depends_on": [
+        "GL-008"
+      ],
+      "areas": [
+        "指数参照组件",
+        "短线组件",
+        "主线组件"
+      ],
+      "deliverables": [
+        "实现可选择单/多指数的同一组件，支持数值卡/横排/列表及字段顺序。",
+        "实现涨跌停/连板高度与梯队、核心主线摘要和对应详情入口，复用五工作区原接口。"
+      ],
+      "acceptance": [
+        "每份指数实例独立选择，异步切换不串值；美股/港股/沪深的日期时区、停盘/过期状态分别显示。",
+        "纳指100不以纳指综合替代；指数列表只开放已识别口径，配置存在不代表源当前可用。",
+        "连板/主线缺字段不填零，入口返回原功能对应对象；主线/连板不另建互相冲突的口径。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-011",
+      "phase": "P2",
+      "title": "接入多空辨析和持仓风险组件",
+      "status": "done",
+      "depends_on": [
+        "GL-008"
+      ],
+      "areas": [
+        "多空辨析组件",
+        "持仓风险组件",
+        "研究档案接口"
+      ],
+      "deliverables": [
+        "将已有多空辨析、组合风险结构化结果映射为摘要组件，链接至原报告/证据详情。",
+        "展示研究对象、生成时间、证据截止、运行时及方法/Skill版本引用；按对象/快照绑定结果。"
+      ],
+      "acceptance": [
+        "已有报告只读复用；无报告、运行中、失败、过期分别显示；不会把规则市场判断标为AI观点。",
+        "最新行情变化不改写原报告的事实、理由、反证和失效条件；不同研究对象不混用。",
+        "需要新分析时进入现有研究入口，沿用任务去重/恢复机制；本任务验收无需新增真实模型调用。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-012",
+      "phase": "P2",
+      "title": "接入自选观察并明确名单数据归属",
+      "status": "done",
+      "depends_on": [
+        "GL-008"
+      ],
+      "areas": [
+        "自选观察组件",
+        "共享关注名单"
+      ],
+      "deliverables": [
+        "核对现有关注/持仓/股票清单的真实存储；优先复用已有关注名单服务。",
+        "若没有独立关注名单，只新增最小共享名单能力；实例保存名单ID/股票筛选和列字段，支持多个实例独立观察。"
+      ],
+      "acceptance": [
+        "手动调整名单是受支持输入，不影响组件成立；组件配置、共享名单事实和真实持仓分开。",
+        "移除组件或配置不删除关注名单/持仓；刷新报价不启动个股AI研究。",
+        "新增名单可恢复、去重及校验代码，报价来源/时间/缺失可见，不引入真实账户或交易。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-013",
+      "phase": "P3",
+      "title": "搭建左画布与右组件库编辑器",
+      "status": "done",
+      "depends_on": [
+        "GL-003",
+        "GL-006",
+        "GL-008"
+      ],
+      "areas": [
+        "新增编辑器",
+        "组件库面板"
+      ],
+      "deliverables": [
+        "编辑器左侧画布，右侧默认组件库；提供搜索、分类、可拖动条目、点击+及明确落点反馈。",
+        "支持同类多实例、选中、移除、组件设置切换和只影响草稿的本地操作。"
+      ],
+      "acceptance": [
+        "新建后进入正确草稿；拖入和点击添加均可用，同类重复实例互不覆盖。",
+        "右侧组件库/组件设置可切换；离开未保存草稿有恢复或舍弃路径，观澜启用配置不变。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-014",
+      "phase": "P3",
+      "title": "实现移动与八方向自由缩放",
+      "status": "done",
+      "depends_on": [
+        "GL-013"
+      ],
+      "areas": [
+        "布局引擎",
+        "各组件容器"
+      ],
+      "deliverables": [
+        "实现拖动重排、八方向缩放、数值宽高输入、可选网格吸附、宽高比锁定和默认尺寸恢复。",
+        "按类型限制最小可读尺寸，响应式重排保留桌面布局意图。"
+      ],
+      "acceptance": [
+        "拖动仅在编辑态生效；移动与缩放不误触图表/表格交互，不出现遮挡、越界或不可选卡片。",
+        "图表随容器重绘、表格滚动/卡片内容可读；放大缩小后参数和结果不丢失。",
+        "键盘/数值输入可替代精确拖动；窄屏编辑有可用路径，不强制把所有组件压成不可读小块。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/GL-014-eight-handles.json",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-015",
+      "phase": "P3",
+      "title": "实现标题、数据字号及空间样式设置",
+      "status": "done",
+      "depends_on": [
+        "GL-014"
+      ],
+      "areas": [
+        "组件设置侧栏",
+        "样式schema"
+      ],
+      "deliverables": [
+        "组件设置包含数据/尺寸/样式TAB，提供标题文字/字号、数字字号、说明字号、标题栏/图表高度、留白、密度和对齐。",
+        "适用组件提供内部自动/两列/四列及表格行高、显示行数/列宽；无关项不显示。"
+      ],
+      "acceptance": [
+        "应用到草稿可即时预览；字体加大与卡片尺寸分别控制，文本不会被默默截掉。",
+        "设置只作用于选中实例；同类另一实例、历史版本、组件默认和原今日总览不被改变。",
+        "恢复默认有明确作用范围，不覆盖实例业务参数或启用状态。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-016",
+      "phase": "P3",
+      "title": "实现组件业务参数及研究结果选择",
+      "status": "done",
+      "depends_on": [
+        "GL-009",
+        "GL-010",
+        "GL-011",
+        "GL-012",
+        "GL-015"
+      ],
+      "areas": [
+        "各组件配置schema",
+        "组件设置数据TAB"
+      ],
+      "deliverables": [
+        "按组件schema生成受控业务配置：指数名单/排序/字段、观察名单、量能显示参数、研究对象/结果绑定等。",
+        "区分可配置、只读来源状态及不可用能力；组件设置不提供全局模型、凭据和MCP安装管理。"
+      ],
+      "acceptance": [
+        "改变指数/观察对象后用正确参数读取共享数据；非法值明确提示，不保存无法识别的绑定。",
+        "业务参数和样式可独立调整；选择旧研究结果保持原证据时间。",
+        "更改参数不自动启动AI；具备能力不等于已授权/可用，缺口如实呈现。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-017",
+      "phase": "P3",
+      "title": "打通草稿保存、保存并启用及取消",
+      "status": "done",
+      "depends_on": [
+        "GL-005",
+        "GL-013",
+        "GL-014",
+        "GL-015",
+        "GL-016"
+      ],
+      "areas": [
+        "编辑器保存流程",
+        "缩略图生成"
+      ],
+      "deliverables": [
+        "连接应用到草稿、保存版本、保存并启用、取消及异常恢复流程；生成脱敏布局缩略图。",
+        "保留未保存修改提示和受控草稿恢复，保存完成原地更新版本状态。"
+      ],
+      "acceptance": [
+        "保存版本新增历史配置且不切换启用指针；保存并启用成功后才切换观澜，不整页刷新。",
+        "取消/保存失败/网络中断不会破坏旧版本；双窗口冲突有明确处理，不静默覆盖。",
+        "缩略图默认使用布局示意或脱敏数据，保存为本地资产，不公开真实持仓/账号/私人研究。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-018",
+      "phase": "P4",
+      "title": "实现每页两条的配置版本列表",
+      "status": "done",
+      "depends_on": [
+        "GL-005",
+        "GL-017"
+      ],
+      "areas": [
+        "我的看板列表"
+      ],
+      "deliverables": [
+        "我的看板按记录竖向排列，左侧名称/版本号/配置时间/组件数/操作，右侧大缩略图。",
+        "默认每页2条，支持搜索、滚动和分页；当前启用与当前选中分开，默认按保存时间倒序。"
+      ],
+      "acceptance": [
+        "0/1/2/多页记录布局正确；搜索/翻页后选中和复制来源不会错位，缩略图不是实时行情。",
+        "版本名称、时间、组件数来自真实配置；启用标签只对应唯一启用指针。",
+        "最新设计的双记录布局在常用桌面完整可读，窄屏可纵向重排。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-019",
+      "phase": "P4",
+      "title": "实现空白新建与复制所选版本",
+      "status": "done",
+      "depends_on": [
+        "GL-018",
+        "GL-017"
+      ],
+      "areas": [
+        "新建配置侧栏",
+        "复制流程"
+      ],
+      "deliverables": [
+        "新建侧栏支持名称、空白/复制来源、是否复制参数/尺寸样式；复制所选版本预选正确来源。",
+        "创建并编辑生成新草稿，保存时分配新版本号，复制来源追溯保留。"
+      ],
+      "acceptance": [
+        "选中只用于操作，复制/创建草稿不改变启用版本；草稿取消不留下伪造历史版本。",
+        "从历史版本复制后组件和实例设置独立，原版本可继续预览和启用。",
+        "删除或归档来源后的异常明确处理，不复制到错误配置。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-021",
+      "phase": "P4",
+      "title": "实现配置重命名及归档恢复",
+      "status": "done",
+      "depends_on": [
+        "GL-018",
+        "GL-019",
+        "GL-005"
+      ],
+      "areas": [
+        "配置元数据与归档"
+      ],
+      "deliverables": [
+        "更多菜单提供显示名称管理、归档/恢复；删除入口采用可恢复归档，不做业务数据级联删除。",
+        "历史配置主体不可变；显示别名/归档状态单独存元数据，时间和来源可追溯。"
+      ],
+      "acceptance": [
+        "正在启用的版本不能直接归档，需先显式启用其他版本；任何操作不隐式替换当前配置。",
+        "归档版本可查可恢复，不重用版本号；原行情、研究、持仓和关注名单不受影响。",
+        "历史配置缺组件/旧schema仍可预览缺口并复制修正，不能静默修改原版本。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-022",
+      "phase": "P5",
+      "title": "实现独立组件库查询管理",
+      "status": "done",
+      "depends_on": [
+        "GL-006",
+        "GL-017",
+        "GL-021"
+      ],
+      "areas": [
+        "组件库管理TAB"
+      ],
+      "deliverables": [
+        "组件库TAB显示总数、分类/搜索、预览、收藏、隐藏、能力/来源状态及配置版本引用详情。",
+        "编辑器右侧同步同一注册清单；从独立库添加时进入新建或已有草稿编辑。"
+      ],
+      "acceptance": [
+        "初始8类名称与功能一致，统计按组件类型、实例和配置版本分别表达，不能把示例数当上线数。",
+        "库中隐藏/收藏立即作用于添加列表，不删旧实例；引用能定位对应配置版本。",
+        "添加操作不直接修改观澜；全局Skill/MCP/模型设置仍留在系统设置。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-023",
+      "phase": "P5",
+      "title": "实现组件默认参数管理",
+      "status": "done",
+      "depends_on": [
+        "GL-022",
+        "GL-016"
+      ],
+      "areas": [
+        "组件默认配置"
+      ],
+      "deliverables": [
+        "提供按类型编辑和恢复默认，区分系统默认、用户默认与当前实例值。",
+        "默认设置沿用同一schema与预览能力，展示只对后续新增实例生效。"
+      ],
+      "acceptance": [
+        "修改默认后新实例获得新值；已有草稿实例/保存版本保持原值。",
+        "不支持或非法默认不能保存；默认中没有行情结果、凭据或个人业务记录副本。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-024",
+      "phase": "P5",
+      "title": "实现我的预设完整管理",
+      "status": "done",
+      "depends_on": [
+        "GL-006",
+        "GL-022",
+        "GL-023"
+      ],
+      "areas": [
+        "预设管理与添加"
+      ],
+      "deliverables": [
+        "支持从实例另存预设，预设查看、创建、复制、编辑、重命名、删除及添加到草稿。",
+        "预设包含允许复用的业务参数/尺寸/样式，复制到实例后独立；兼容性由schema判断。"
+      ],
+      "acceptance": [
+        "同一预设可添加多个独立实例；修改/删除预设不追改已有实例与历史配置。",
+        "旧schema或不再支持的参数明确提示，可复制修正，不静默丢字段。",
+        "保存配置、保存组件默认、保存预设三种作用范围在页面上清楚可辨。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-025",
+      "phase": "P5",
+      "title": "贯通单指数、多指数与预设工作流",
+      "status": "done",
+      "depends_on": [
+        "GL-010",
+        "GL-016",
+        "GL-024"
+      ],
+      "areas": [
+        "指数预设侧栏",
+        "跨页联动"
+      ],
+      "deliverables": [
+        "完成创业板/沪深300等单指数选择、多指数排序及显示字段配置，另存为可复用预设。",
+        "打通库中选择预设→拖入/点击添加→调整样式→保存并启用→观澜查看。"
+      ],
+      "acceptance": [
+        "单指数和多指数共用组件能力；同页多份独立设置不串值。",
+        "操作链实际可用，参数和样式重启后保留；旧实例/原今日总览指数列表不被改变。",
+        "不同市场数据截止日期/来源及缺口在配置前后均可辨。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-007",
+      "phase": "P5",
+      "title": "增加观澜及看板与组件入口",
+      "status": "done",
+      "depends_on": [
+        "GL-021",
+        "GL-025"
+      ],
+      "areas": [
+        "frontend/src/lib/workspaces.ts",
+        "App与新增页面"
+      ],
+      "deliverables": [
+        "新增观澜使用页；底部在系统设置上方增加看板与组件，同级菜单内仅我的看板/组件库两个主TAB。",
+        "增加对应路由、活动导航、直达/返回和首次无配置引导；观澜只显示启用配置只读名称/版本。"
+      ],
+      "acceptance": [
+        "原今日总览、默认入口、旧hash兼容和五工作区原功能保持；没有盘后研究第二个观澜页。",
+        "观澜使用页没有编辑手柄、组件齿轮或多看板下拉；无配置/失效配置能进入管理处理，不显示示例金融数字。",
+        "初始布局记录不自动冒用设计稿的V4/V5、日期或示例结论。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-020",
+      "phase": "P5",
+      "title": "实现预览、启用和观澜即时切换",
+      "status": "done",
+      "depends_on": [
+        "GL-018",
+        "GL-019",
+        "GL-007"
+      ],
+      "areas": [
+        "预览与启用流程",
+        "观澜配置订阅"
+      ],
+      "deliverables": [
+        "提供历史布局预览和显式启用；观澜读取新启用revision后原地更新。",
+        "明确显示配置版本时间、行情当前时间及AI证据截止三种不同时间。"
+      ],
+      "acceptance": [
+        "预览不启用；启用旧版本只恢复布局/参数并读取当前有效数据，不恢复旧行情或篡改历史研究。",
+        "切换期间不出现新布局混入旧对象结果；不支持的组件显示可诊断占位。",
+        "两个窗口及应用重启后启用版本一致；切换不整页刷新，不产生新的AI任务。"
+      ],
+      "evidence": [
+        "evidence/functional-checks.md",
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-026",
+      "phase": "P6",
+      "title": "完成核心状态与数据隔离回归",
+      "status": "done",
+      "depends_on": [
+        "GL-021",
+        "GL-025",
+        "GL-020"
+      ],
+      "areas": [
+        "有意义的回归测试",
+        "构建与类型检查"
+      ],
+      "deliverables": [
+        "汇总实现阶段已补的有意义测试：不可变版本、原子启用、复制隔离、默认/预设隔离、异常恢复和并发冲突。",
+        "执行受影响前后端测试、类型检查与构建；有新失败时才扩大检查。"
+      ],
+      "acceptance": [
+        "新存储/接口/适配逻辑的关键风险通过真实隔离测试，旧首页、旧路由及既有研究流程回归通过。",
+        "异步乱序/过期/缺失/离线/不兼容组件有验证；试验fixtures不冒充真实数据验收。",
+        "所有失败修复后重新验证，不能用文档说明替代仍可执行的修复。"
+      ],
+      "evidence": [
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-027",
+      "phase": "P6",
+      "title": "完成Web实际操作与静态设计对照",
+      "status": "done",
+      "depends_on": [
+        "GL-026"
+      ],
+      "areas": [
+        "实际浏览器UI验收"
+      ],
+      "deliverables": [
+        "用实际浏览器覆盖新建/复制/拖入/+添加/移动/八方向缩放/配置/保存/取消/预览/启用/归档/预设全过程。",
+        "核对最新三张图及保留的观澜/组件库/指数/尺寸样式稿，检查常用与窄桌面、触控窄屏降级、溢出、键盘及控制台。"
+      ],
+      "acceptance": [
+        "视觉与入口符合最终说明；列表2条/页、右侧库、字号与卡片宽高调整可实际操作。",
+        "原今日总览及五工作区关键入口无回归，更新无需整页刷新。",
+        "保存截图/操作记录；含私人数据截图只留受保护本地位置，公开证据脱敏。"
+      ],
+      "evidence": [
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-028",
+      "phase": "P6",
+      "title": "完成Electron隔离验收",
+      "status": "done",
+      "depends_on": [
+        "GL-027"
+      ],
+      "areas": [
+        "desktop构建",
+        "隔离桌面验收"
+      ],
+      "deliverables": [
+        "在独立DataDir/用户资料副本构建并启动现有macOS桌面版本，核对新路由、拖动缩放、持久化及Web共享合同。",
+        "确认旧设置、持仓、研究和本地字体偏好在副本仍可用；完成后退出本次验收实例。"
+      ],
+      "acceptance": [
+        "实际桌面渲染与关键操作通过；不以包构建成功代替启动验收。",
+        "不替换全局安装、不发布、不同步测试数据回原库；不用旧PID文件终止无关进程。",
+        "Windows/Linux未实际验证则明确保留限制，不据macOS结果宣称全平台通过。"
+      ],
+      "evidence": [
+        "evidence/delivery-verification.md",
+        "evidence/GL-028-final-native.json",
+        "evidence/GL-028-final-native-protection.json",
+        "evidence/GL-028-final-native-create.jpg",
+        "evidence/GL-028-final-native-drag.jpg",
+        "evidence/GL-028-final-native-library.jpg",
+        "evidence/GL-028-final-native-settings.jpg",
+        "evidence/GL-028-final-native-preset.jpg",
+        "evidence/GL-028-final-native-restart.jpg",
+        "evidence/GL-028-final-web-settings-390.jpg"
+      ],
+      "progress_note": "解锁后完成实际macOS增量验收：右侧新建、组件库示意、空画布Pointer Capture拖入0→1、保存启用V6及重启保留通过。修复默认/预设长表单的底部操作溢出，原生与390px复验通过；最终构建和10项针对回归通过。隔离实例已退出，原数据与模型用量保持。"
+    },
+    {
+      "id": "GL-029",
+      "phase": "P6",
+      "title": "复核数据保护、请求效率和AI零误触发",
+      "status": "done",
+      "depends_on": [
+        "GL-027",
+        "GL-028"
+      ],
+      "areas": [
+        "数据保护核对",
+        "性能及调用审计"
+      ],
+      "deliverables": [
+        "对照开工基线核对原业务数据、设置及既有改动；区分本次授权的新配置/名单写入与后台行情缓存刷新。",
+        "记录原首页与观澜在同机环境的缓存首屏/重复请求，布局全流程的模型请求、研究任务和用量增量。"
+      ],
+      "acceptance": [
+        "布局动作产生AI调用0，未新增真实模型分析；重复同口径组件请求有合并，不按实例倍增。",
+        "旧记录不被改写/丢失，设置不被覆盖；后台合法变化不能误报成本次破坏，也不能掩盖无解释的数据变化。",
+        "真实数据可用性按组件逐项披露；ES5未验内容仍保留，样本数和截图不能证明预测有效。"
+      ],
+      "evidence": [
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "已实现并通过必要验证；各项证据见本记录及引用文件。"
+    },
+    {
+      "id": "GL-030",
+      "phase": "P6",
+      "title": "汇总交付、使用说明和接续状态",
+      "status": "done",
+      "depends_on": [
+        "GL-026",
+        "GL-027",
+        "GL-028",
+        "GL-029"
+      ],
+      "areas": [
+        "正式交付文档",
+        "任务状态"
+      ],
+      "deliverables": [
+        "更新本任务账本、勾选清单和接续状态；提供观澜/管理/编辑/预设操作说明、schema及恢复说明。",
+        "汇总最终实际截图、测试、构建、数据保护与缺口证据；通知完成范围和限制。"
+      ],
+      "acceptance": [
+        "30项均有交付和验证证据，或真实外部阻塞被逐项记录并明确标为部分完成；不能笼统宣称全部完成。",
+        "用户可从导航进入并完成全操作链；旧主页可继续使用。",
+        "本计划不自动提交/推送/发布；后续用户明确要求提交时按当时AGENTS.md执行。"
+      ],
+      "evidence": [
+        "evidence/delivery-verification.md"
+      ],
+      "blocker": null,
+      "progress_note": "30项任务完成。原本地网站已更新；Web/macOS实际验收与数据核对通过，使用说明及逐项证据齐备。Windows/Linux未实测、ES5实盘数据验收继续独立保留。未提交、推送、发布或调用真实AI。"
+    }
+  ],
+  "execution_order": [
+    "GL-001",
+    "GL-002",
+    "GL-003",
+    "GL-004",
+    "GL-005",
+    "GL-006",
+    "GL-008",
+    "GL-009",
+    "GL-010",
+    "GL-011",
+    "GL-012",
+    "GL-013",
+    "GL-014",
+    "GL-015",
+    "GL-016",
+    "GL-017",
+    "GL-018",
+    "GL-019",
+    "GL-021",
+    "GL-022",
+    "GL-023",
+    "GL-024",
+    "GL-025",
+    "GL-007",
+    "GL-020",
+    "GL-026",
+    "GL-027",
+    "GL-028",
+    "GL-029",
+    "GL-030"
+  ],
+  "completed_at": "2026-10-15T05:47:21.717079+08:00"
+}

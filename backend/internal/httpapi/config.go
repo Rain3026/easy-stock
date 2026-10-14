@@ -153,6 +153,7 @@ type Config struct {
 	MarketOverview           MarketOverviewProvider
 	Inflection               InflectionEvaluator
 	DailyResearchDBPath      string
+	GuanlanDBPath            string
 	ReviewDBPath             string
 	PortfolioDBPath          string
 	StockResearchDBPath      string

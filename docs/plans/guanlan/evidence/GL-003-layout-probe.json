@@ -1,0 +1,26 @@
+{
+  "library": "react-grid-layout",
+  "version": "2.2.3",
+  "license": "MIT",
+  "react": "19.2.0",
+  "actual_browser": "Codex IAB",
+  "handles_per_item": 8,
+  "drag_y_before": 0,
+  "drag_y_after": 22,
+  "resize_before": [
+    60,
+    20
+  ],
+  "resize_after": [
+    70,
+    16
+  ],
+  "minimum_width_after_input_1": 24,
+  "repeated_instances": 3,
+  "console_errors": 0,
+  "screenshot": "GL-003-grid-proof.jpg",
+  "remaining": [
+    "full editor responsive behavior",
+    "Electron integration"
+  ]
+}

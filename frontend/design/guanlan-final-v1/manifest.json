@@ -1,0 +1,51 @@
+{
+  "title": "观澜与看板/组件管理：整合最终设计",
+  "created_at": "2026-10-14T22:53:44.604846+08:00",
+  "type": "static_raster_design_only",
+  "status": "pending_user_review",
+  "generator": "built-in image_gen",
+  "application_code_modified": false,
+  "existing_today_overview_modified": false,
+  "navigation": {
+    "usage": "观澜",
+    "management": "看板与组件",
+    "management_location": "sidebar_bottom_immediately_above_system_settings",
+    "management_tabs": [
+      "我的看板",
+      "组件库"
+    ]
+  },
+  "files": [
+    {
+      "path": "01-guanlan-view.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "51c3cc7faa4297da5b938b94c7a8ac18fce570139eb11ddc347da5b26ce91077"
+    },
+    {
+      "path": "02-board-management.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "c4e2c6348f13f56192e51288011448d0ee3d10833b260eb8a459e39547362c24"
+    },
+    {
+      "path": "03-board-editor.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "75ece49cee718e510f1042da8da1ecc92652459e81d3e010e0e05879422c00e8"
+    },
+    {
+      "path": "04-component-library.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "f6a9694f90f9ec00e10f3fea11818edd8d76781219baf2da5cb3ed95280c4c03"
+    },
+    {
+      "path": "05-index-presets.png",
+      "width": 1536,
+      "height": 1024,
+      "sha256": "ad1f38d17970ce6f279acca5bc92b0d6cd06426d1da16383b70be546bf103774"
+    }
+  ],
+  "prior_design_images_unchanged": 8
+}

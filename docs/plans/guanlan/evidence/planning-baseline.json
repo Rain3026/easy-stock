@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "purpose": "只读规划基线；不是实施前数据备份，开工时必须重新核对。",
+  "captured_at": "2026-10-14T23:21:53.014249+08:00",
+  "branch": "oss-main",
+  "head": "a4dcf5869b700dd87912c3566f6cf2903efbff05",
+  "remotes": {
+    "fork": "https://github.com/Rain3026/easy-stock.git",
+    "upstream": "https://github.com/jundizhou/easy-stock.git"
+  },
+  "status_entry_count_default": 175,
+  "status_entry_count_expanded": 447,
+  "status_sha256": "6e60fba62657b15d221112edea6b93da7359be5635c6ab70db2c95ab089bb329",
+  "dirty_content_sha256": "a88a110aedb65dc1c9c3980fd4bd986220ac43612f46851f783ab348792e4553",
+  "design_images": [
+    {
+      "path": "frontend/design/guanlan-config-versions-v1/01-config-version-list.png",
+      "sha256": "fcb0fbc1b7c604025d044b1f67c333cad497a5874c7a677535ddfb9751ba3289"
+    },
+    {
+      "path": "frontend/design/guanlan-config-versions-v1/02-create-config-version.png",
+      "sha256": "5c0313a2801d81722991cede64f5dd1272c2ed9896a54a2408c5706e2c143fd5"
+    },
+    {
+      "path": "frontend/design/guanlan-config-versions-v1/03-drag-component-editor.png",
+      "sha256": "b272f1fddea475b32a933281e55b7027fb45e2de528005da954529ef17ace7fa"
+    },
+    {
+      "path": "frontend/design/guanlan-final-v1/01-guanlan-view.png",
+      "sha256": "51c3cc7faa4297da5b938b94c7a8ac18fce570139eb11ddc347da5b26ce91077"
+    },
+    {
+      "path": "frontend/design/guanlan-final-v1/02-board-management.png",
+      "sha256": "c4e2c6348f13f56192e51288011448d0ee3d10833b260eb8a459e39547362c24"
+    },
+    {
+      "path": "frontend/design/guanlan-final-v1/03-board-editor.png",
+      "sha256": "75ece49cee718e510f1042da8da1ecc92652459e81d3e010e0e05879422c00e8"
+    },
+    {
+      "path": "frontend/design/guanlan-final-v1/04-component-library.png",
+      "sha256": "f6a9694f90f9ec00e10f3fea11818edd8d76781219baf2da5cb3ed95280c4c03"
+    },
+    {
+      "path": "frontend/design/guanlan-final-v1/05-index-presets.png",
+      "sha256": "ad1f38d17970ce6f279acca5bc92b0d6cd06426d1da16383b70be546bf103774"
+    },
+    {
+      "path": "frontend/design/guanlan-v2/01-component-size.png",
+      "sha256": "033202917fd038acd1f4c91006bc34c36d69c110b69e92d2762b2424e5ebaa05"
+    },
+    {
+      "path": "frontend/design/guanlan-v2/02-component-style.png",
+      "sha256": "84539ad7836401ec963587c2a24ae4315651e217e7b0bac6dd19fed019305b68"
+    }
+  ],
+  "application_code_modified_by_planning": false,
+  "runtime_settings_or_business_db_written": false,
+  "source_of_existing_es5_status": "docs/plans/five-workspaces/STATE.md（本轮只读取，未重新执行实盘验收）"
+}

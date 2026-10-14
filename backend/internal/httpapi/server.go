@@ -17,6 +17,7 @@ import (
 	"easy-stock/backend/internal/appsettings"
 	"easy-stock/backend/internal/datahub"
 	"easy-stock/backend/internal/foundation"
+	"easy-stock/backend/internal/guanlan"
 	"easy-stock/backend/internal/marketemotion"
 	"easy-stock/backend/internal/marketpulse"
 	"easy-stock/backend/internal/methodology"
@@ -41,6 +42,7 @@ import (
 )
 
 type Server struct {
+	guanlan                  *guanlan.Store
 	sourceMonitor            *datahub.Monitor
 	dailyResearch            *dailyResearchEngine
 	dailyOverview            *dailyOverviewEngine
@@ -417,6 +419,7 @@ func NewServer(config any) *Server {
 	s.reviewAutomation.SetDailySummaryCompleted(s.notifyDailySummary)
 	s.portfolioOptimization = portfoliooptimization.NewService(cfg.PortfolioStore, usageGateway, portfoliooptimization.Dependencies{Collect: s.collectOptimizationUniverse, Research: s.resolvePortfolioResearch, Quotes: s.refreshOptimizationQuotes})
 	s.initDailyResearch(cfg)
+	s.initGuanlan(cfg)
 	if service, ok := s.agentGateway.(*agent.Service); ok {
 		service.SetSkillResolver(s.dailyResearch.store.Skills().Resolve)
 	}
@@ -475,6 +478,7 @@ func (s *Server) Close() error {
 		s.portfolioScheduler.Close()
 	}
 	var closeErrors []error
+	closeErrors = append(closeErrors, s.guanlan.Close())
 	closeErrors = append(closeErrors, s.dailyResearch.close())
 	if s.notifications != nil {
 		s.notifications.Close()
@@ -586,6 +590,7 @@ func (s *Server) refreshMasterySnapshot(ctx context.Context, force bool) {
 }
 
 func (s *Server) routes() {
+	s.guanlanRoutes()
 	s.dailyResearchRoutes()
 	s.evidenceRoutes()
 	s.agentEvidenceRoutes()

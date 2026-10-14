@@ -1,0 +1,21 @@
+{
+  "environment": "isolated 20075/20083",
+  "operations": "pointer drop and title-size adjustment then apply draft",
+  "requests": [
+    {
+      "url": "http://127.0.0.1:20083/api/v1/boards/drafts/330cb0e53075007ef97f5623d25aeb04",
+      "method": "OPTIONS"
+    },
+    {
+      "url": "http://127.0.0.1:20083/api/v1/boards/drafts/330cb0e53075007ef97f5623d25aeb04",
+      "method": "PUT"
+    }
+  ],
+  "marketResamplingRequests": 0,
+  "aiRequests": 0,
+  "pointerCaptureRegression": {
+    "countBefore": 4,
+    "countOutside": 4,
+    "countAfter": 5
+  }
+}

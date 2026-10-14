@@ -1,0 +1,19 @@
+{
+  "checked_at": "2026-10-15T05:46:39.138874+08:00",
+  "settings_unchanged": true,
+  "protected_databases_unchanged": {
+    "daily-research.db": true,
+    "portfolio-inspections.db": true,
+    "reviews.db": true,
+    "stock-research.db": true
+  },
+  "model_usage_unchanged_since_local_update": true,
+  "staged_files": [],
+  "temporary_desktop_exited": true,
+  "original_services_healthy": {
+    "frontend_20073": true,
+    "backend_20081": true
+  },
+  "native_logs_recent_errors": 0,
+  "original_guanlan_state_empty": true
+}

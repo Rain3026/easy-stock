@@ -1,0 +1,52 @@
+PROMPT 1
+Use case: ui-mockup. STATIC high-fidelity desktop UI image, flat1536x1024, readable Simplified Chinese, no browser frame or interactive code. Match the EasyStock reference: white sidebar, pale cool-gray background, white bordered cards, navy type, royal blue controls, small corners and line icons. Exact sidebar: 今日总览, 观澜, 机会发现, 个股研究, 持仓管理, 研究中心; lower资讯检索/AI助手; bottom用量与任务, 看板与组件 (selectedblue), 系统设置. Main heading “看板与组件”, subtitle “管理观澜配置版本与组件”. Only two management tabs “我的看板” selectedblueunderline and “组件库”. Tiny top-right “静态设计稿 · 示例数据”. CRITICAL INFORMATION MODEL: only ONE usage page观澜. Store several CONFIGURATION VERSIONS of that ONE page. Do NOT show separate盘中看盘 and盘后研究 dashboard cards, do not show a盘后研究 board anywhere.
+Screen01: configuration VERSION LIST, completely replace the old side-by-side board cards and REMOVE right creation drawer. Use full main width.
+Main content header “我的看板”, supporting text “观澜 · 一个使用页面，多套配置版本”. Count “4 个配置版本”. Top toolbar search “搜索配置名称”, outline “复制所选版本”, primaryblue “+ 新建配置”. Small active line “当前启用：量能优先 · V4”.
+Exactly TWO WIDE HORIZONTAL RECORDS stacked VERTICALLY, each approximately290px high. This is a list with LEFT METADATA and RIGHT LANDSCAPE THUMBNAIL, NOT two cards side by side.
+Record1 leftabout30%: round checked selection indicator; name “量能优先” plus “V4” badge; blue “当前使用”; “配置时间 2026-10-14 18:20”; “6 个组件”; smalldescription “量能放大，突出盘中核心信息”; buttons “预览”, disabled “已启用”, ellipsis. Entire record thinblue outline showing selected.
+Record1 RIGHT70%: one large landscape thumbnail of a six-widget观澜 layout: slim index strip, large volume chart covering two-thirds, AI card right, three compact bottom width/limits/watchlist cards. No embedded sidebar in thumbnail. Coarse clean previews, no dense unreadable prose.
+Record2 left: empty selection indicator; “标准布局”, “V3” badge; “配置时间 2026-10-13 16:30”; “6 个组件”; description “信息均衡，适合常规观察”; buttons “预览”, outline “启用此版本”, ellipsis.
+Record2 RIGHT70%: a second landscape thumbnail of the SAME usage page with a different configuration: equal-width volume and AI cards, indexstrip, three smallbottom cards. Clearly a configuration variation, not different application function.
+Bottom pagination visible: “共 4 条”, dropdown “2 条/页”, “上一页”, blue page1, page2, “下一页”, “第1/2页”.
+Bottom note “选中用于复制；启用后观澜使用该版本。历史配置不覆盖。” Keep exactly2rows per page. No right panel, no grid of different boards.
+
+PROMPT 2
+Use case: ui-mockup. STATIC high-fidelity desktop UI image, flat1536x1024, readable Simplified Chinese, no browser frame or interactive code. Match the EasyStock reference: white sidebar, pale cool-gray background, white bordered cards, navy type, royal blue controls, small corners and line icons. Exact sidebar: 今日总览, 观澜, 机会发现, 个股研究, 持仓管理, 研究中心; lower资讯检索/AI助手; bottom用量与任务, 看板与组件 (selectedblue), 系统设置. Main heading “看板与组件”, subtitle “管理观澜配置版本与组件”. Only two management tabs “我的看板” selectedblueunderline and “组件库”. Tiny top-right “静态设计稿 · 示例数据”. CRITICAL INFORMATION MODEL: only ONE usage page观澜. Store several CONFIGURATION VERSIONS of that ONE page. Do NOT show separate盘中看盘 and盘后研究 dashboard cards, do not show a盘后研究 board anywhere.
+Screen02: NEW CONFIGURATION VERSION using a right side panel, with the SAME vertically stacked two-record version list in the background. Background record names “量能优先·V4” current and “标准布局·V3”, not盘中/盘后boards. Left record metadata, right thumbnail. SourceV4selected.
+Right opaque white panel about400px, header “新建配置”, closex; small “用于观澜页面”.
+Fields:
+“配置名称” input “量能优先 · 微调”.
+“创建方式” two selectable cards: “空白配置” unselected; “复制已有版本” selectedblue.
+“来源版本” dropdown “量能优先 · V4”.
+Checked “复制组件参数”; checked “复制尺寸与样式”.
+Readonly “新版本号” field “V5 · 自动生成”.
+Pale blue note “先创建编辑草稿，当前启用版本保持不变”.
+A short next-step hint “下一步：进入画布，从右侧组件库拖入组件”.
+Bottom fixed outline “取消”, primaryblue “创建并编辑”.
+No设为默认看板 toggle. No new independent dashboard. The one观澜page uses one active configuration version; this creates an editing draft copied from a chosen version. Keep fonts crisp and screen uncluttered.
+
+PROMPT 3
+Use case: ui-mockup. STATIC high-fidelity desktop UI image, flat1536x1024, readable Simplified Chinese, no browser frame or interactive code. Match the EasyStock reference: white sidebar, pale cool-gray background, white bordered cards, navy type, royal blue controls, small corners and line icons. Exact sidebar: 今日总览, 观澜, 机会发现, 个股研究, 持仓管理, 研究中心; lower资讯检索/AI助手; bottom用量与任务, 看板与组件 (selectedblue), 系统设置. Main heading “看板与组件”, subtitle “管理观澜配置版本与组件”. Only two management tabs “我的看板” selectedblueunderline and “组件库”. Tiny top-right “静态设计稿 · 示例数据”. CRITICAL INFORMATION MODEL: only ONE usage page观澜. Store several CONFIGURATION VERSIONS of that ONE page. Do NOT show separate盘中看盘 and盘后研究 dashboard cards, do not show a盘后研究 board anywhere.
+Screen03: CONFIGURATION EDITOR with clearly DRAGGABLE COMPONENT PALETTE on the RIGHT. Use reference canvas editor style but REPLACE right typography form with a component library.
+Breadcrumb “我的看板 / 编辑配置”; editor toolbar “量能优先 · 微调”, “V5 草稿”, small “基于 V4”; buttons “取消”, outline “保存版本”, primaryblue “保存并启用”. Small “返回版本列表” link.
+Main left canvas around900px wide: subtle grid, a slimcompact indexstrip, volume card withbluechart and numbers12,487/13,680/17,670/−18.3%, AIcard谨慎偏空, lower3cards市场宽度/涨跌停与连板/自选观察. Six existing widgets. Selected volume card has a six-dot movementhandle and eight obvious blue square resizinghandles on corners/midpoints. Small sizebadge “760×420px”. Gear icon can open instance settings.
+At BOTTOM of canvas add a large blue-tinted dashed DROP ZONE “拖到这里添加组件”.
+RIGHT opaque pane about360px. Header tabs “组件库” ACTIVEblue underline / “组件设置” inactive. Subtitle “拖动组件到左侧画布”. Search “搜索组件”. Category chips “全部”, “行情”, “AI研究”, “关注”.
+Eight draggable tiles in2columns×4rows, mini preview, title, six-dot grip and small+button. Titles exactly “沪深量能”, “指数参照”, “市场宽度”, “涨跌停与连板”, “核心主线”, “多空辨析”, “持仓风险”, “自选观察”. No disabled已添加 badges, because the same type can be added again.
+Illustrate a STATIC drag in progress: a small translucent floating card labeled “核心主线” with grabbing cursor moving from its rightpalette tile TOWARD the canvas dropzone, and a thin restrained dashedblue direction line. The dropzone is highlighted. Do not add giant explanatory arrows or any animation.
+Footer of pane “可重复添加同类组件，分别设置参数”. Bottom canvasnote “保存为新版本，不覆盖原配置”.
+Preserve the manager menu selected atbottom above系统设置, no application editor inside观澜. Make RIGHT palette and actualdragconcept visually unmistakable; not a typography form as default.
+
+PROMPT 4
+Edit this STATIC configuration version-list design image by adding ONLY a white NEW CONFIGURATION drawer on the right, approximately400px wide. The drawer can overlay the right side of existing thumbnails. Preserve the existing sidebar, selected bottom看板与组件, main heading, two stacked horizontal records and their LEFT metadata exactly: “量能优先 V4”, 当前使用, 配置时间2026-10-14 18:20,6个组件; “标准布局 V3”, 配置时间2026-10-13 16:30,6个组件. Keep single观澜usagepage and configurationversions, never separateboards. Do not invent creators or change dates or componentcounts.
+Drawer content, crisp Simplified Chinese:
+Title “新建配置”, close×; subtitle “用于观澜页面”.
+“配置名称” input “量能优先 · 微调”.
+“创建方式” two selectable choices “空白配置” unselected, “复制已有版本” selectedblue.
+“来源版本” dropdown “量能优先 · V4”.
+Checked “复制组件参数”, checked “复制尺寸与样式”.
+Readonly “新版本号” value “V5 · 自动生成”.
+Small pale blue note “创建编辑草稿，当前启用版本保持不变”.
+Second hint “下一步：进入画布，从右侧组件库拖入组件”.
+Bottom fixed buttons “取消” and blue “创建并编辑”.
+Do not add设为默认看板 toggle. This is onepage's new configuration draft, not a new applicationpage. Same light EasyStock palette and1536x1024 full screenshot. Preserve all background text and controls as far as visible.

@@ -1,0 +1,34 @@
+{
+  "library_version": "2.3.0",
+  "license": "MIT",
+  "browser_drag_resize_minimum_and_repeated_instances": "pass",
+  "electron_actual_render_and_drag": "pass",
+  "electron_resize_before": [
+    60,
+    20
+  ],
+  "native_resize_move_callback": [
+    55,
+    16
+  ],
+  "native_resize_stop_callback_was_stale": [
+    60,
+    20
+  ],
+  "adapter": "capture last constrained layout in onResize; commit that snapshot in onResizeStop",
+  "after_adapter_resize": [
+    55,
+    16
+  ],
+  "after_next_drag": {
+    "y": 19,
+    "w": 55,
+    "h": 16
+  },
+  "source": "https://github.com/react-grid-layout/react-grid-layout/blob/master/CHANGELOG.md",
+  "evidence": [
+    "GL-003-grid-proof.jpg",
+    "GL-003-electron-fixed.png"
+  ],
+  "remaining_validation": "full application and responsive acceptance in P6"
+}

@@ -1,0 +1,48 @@
+{
+  "captured_at": "2026-10-14T23:46:22.580837",
+  "branch": "oss-main",
+  "head": "a4dcf5869b700dd87912c3566f6cf2903efbff05",
+  "protected_worktree_files": 454,
+  "databases": {
+    "daily-research.db": {
+      "integrity": "ok",
+      "tables": 9,
+      "rows": 71
+    },
+    "market-emotion.db": {
+      "integrity": "ok",
+      "tables": 2,
+      "rows": 13
+    },
+    "portfolio-inspections.db": {
+      "integrity": "ok",
+      "tables": 4,
+      "rows": 1
+    },
+    "reviews.db": {
+      "integrity": "ok",
+      "tables": 8,
+      "rows": 1
+    },
+    "stock-research.db": {
+      "integrity": "ok",
+      "tables": 4,
+      "rows": 28
+    },
+    "theme-radar.db": {
+      "integrity": "ok",
+      "tables": 5,
+      "rows": 15
+    }
+  },
+  "settings_sha256": "cd4504ee1909888d5d73eae16a3e56d1f150949cefbb01d435f581d7c4ce52b8",
+  "private_backup_pointer": ".runtime/guanlan/backup-path",
+  "sensitive_contents_printed": false,
+  "browser_storage": {
+    "keys": 2,
+    "plans": 2,
+    "snapshot_sha256": "44be05e2c6a54d0f25b8234679ab4bde1f1d0c9aea1ae54275e710c895f348af",
+    "private_file": "browser-portfolio-backup.json"
+  },
+  "restore": "Use .runtime/guanlan/backup-path for protected files, settings and consistent DB copies; browser snapshot preserves exact values of plans/draft keys. Restore only selected affected objects with services stopped; never overwrite newer unrelated work."
+}
