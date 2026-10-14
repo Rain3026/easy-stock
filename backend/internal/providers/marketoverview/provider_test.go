@@ -57,7 +57,7 @@ type indexFallback struct{}
 
 func (indexFallback) MarketIndexes(context.Context, string) ([]foundation.MarketIndexSnapshot, foundation.SourceMeta, error) {
 	meta := foundation.SourceMeta{Source: "tencent:index"}
-	return []foundation.MarketIndexSnapshot{{ID: "sse", Name: "上证指数", Meta: meta}}, meta, nil
+	return []foundation.MarketIndexSnapshot{{ID: "sse", Name: "上证指数", Price: 3800, Meta: meta}}, meta, nil
 }
 
 func (indexFallback) MarketIndexSeries(context.Context, string, string, int) (foundation.MarketIndexSeries, error) {

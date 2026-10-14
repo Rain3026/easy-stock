@@ -7,9 +7,10 @@ import { PortfolioSetupForm } from './PortfolioSetupForm';
 type Props = {
 	config: BackendConfig | null;
 	summaryDate: string;
+ snapshotID?: string;
 };
 
-export function PortfolioTomorrowExpectation({ config, summaryDate }: Props) {
+export function PortfolioTomorrowExpectation({ config, summaryDate, snapshotID }: Props) {
 	const [job, setJob] = useState<PortfolioExpectationJob | null>(null);
 	const [setupPlanId, setSetupPlanId] = useState('');
 	const [setupDraft, setSetupDraft] = useState<PortfolioDraft | null>(null);
@@ -21,17 +22,18 @@ export function PortfolioTomorrowExpectation({ config, summaryDate }: Props) {
 
 	useEffect(() => {
 		if (!config || !summaryDate) return;
+		setJob(null);
 		let active = true;
 		requestJSON<{ data: PortfolioExpectationJob | null }>(config, `/api/v1/reviews/portfolio-expectations/latest?summary_date=${encodeURIComponent(summaryDate)}`)
 			.then((payload) => {
 				if (!active || !payload.data) return;
 				const draft = readPortfolioDraft();
 				const current = portfolioDraftToHoldings(draft.holdings);
-				if (draft.profile === payload.data.request.trader_profile && sameHoldings(current, payload.data.request.holdings)) setJob(payload.data);
+				if ((!snapshotID || payload.data.request.snapshot_id === snapshotID) && draft.profile === payload.data.request.trader_profile && sameHoldings(current, payload.data.request.holdings)) setJob(payload.data);
 			})
 			.catch(() => undefined);
 		return () => { active = false; };
-	}, [config, summaryDate]);
+	}, [config, summaryDate, snapshotID]);
 
 	useEffect(() => {
 		if (!config || !job || job.status !== 'running') return;
@@ -60,7 +62,7 @@ export function PortfolioTomorrowExpectation({ config, summaryDate }: Props) {
 			const payload = await requestJSON<{ data: PortfolioExpectationJob }>(config, '/api/v1/reviews/portfolio-expectations', {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ summary_date: summaryDate, trader_profile: draft.profile, holdings: portfolioDraftToHoldings(draft.holdings), force }),
+				body: JSON.stringify({ summary_date: summaryDate, snapshot_id: snapshotID, trader_profile: draft.profile, holdings: portfolioDraftToHoldings(draft.holdings), force }),
 			});
 			setJob(payload.data);
 			setSetupDraft(null);
@@ -70,7 +72,7 @@ export function PortfolioTomorrowExpectation({ config, summaryDate }: Props) {
 		} finally {
 			setStarting(false);
 		}
-	}, [config, summaryDate]);
+	}, [config, summaryDate, snapshotID]);
 
 	const openSetup = useCallback(async () => {
 		const plans = readPortfolioPlans();
@@ -95,7 +97,7 @@ export function PortfolioTomorrowExpectation({ config, summaryDate }: Props) {
 
 	const label = running ? `分析中 ${job?.completed_stocks || 0}/${job?.total_stocks || '—'}` : starting ? '正在启动' : job?.report_available ? '查看明日预期' : '持仓明日预期';
 	return <>
-		<button type="button" className="portfolio-expectation-trigger" onClick={handlePrimaryAction} disabled={running || starting} title="结合今日复盘和当前持仓生成明日情景预期">{running || starting ? <LoaderCircle className="spin" size={14} /> : job?.report_available ? <CheckCircle2 size={14} /> : <WalletCards size={14} />}{label}</button>
+		<button type="button" className="portfolio-expectation-trigger" onClick={handlePrimaryAction} disabled={running || starting} title="结合选中的每日研究快照和当前持仓生成明日情景预期">{running || starting ? <LoaderCircle className="spin" size={14} /> : job?.report_available ? <CheckCircle2 size={14} /> : <WalletCards size={14} />}{label}</button>
 		{error && <div className="portfolio-expectation-error" role="alert"><CircleAlert size={14} /><span>{error}</span><button type="button" onClick={() => setError('')} aria-label="关闭错误"><X size={13} /></button></div>}
 		{setupDraft && <PortfolioExpectationSetupDialog config={config} draft={setupDraft} directory={directory} busy={starting} onChange={setSetupDraft} onClose={() => setSetupDraft(null)} onSubmit={() => { try { writePortfolioDraft(setupDraft, setupPlanId); void startExpectation(setupDraft); } catch (cause) { setError(`持仓方案保存失败：${cause instanceof Error ? cause.message : '请重试'}`); } }} />}
 		{reportOpen && job?.report && <PortfolioExpectationReportDialog report={job.report} partial={job.status === 'partial'} onClose={() => setReportOpen(false)} onRegenerate={() => { setReportOpen(false); void startExpectation(readPortfolioDraft(), true); }} />}

@@ -1,0 +1,7 @@
+import{describe,it,expect}from'vitest';import{mergePortfolioPlans}from'./portfolio-sync';import type{PortfolioPlans}from'./portfolio-draft';
+const state=(cost:string):PortfolioPlans=>({activeId:'one',plans:[{id:'one',name:'方案',draft:{profile:'balanced',totalAssets:500000,holdings:[{symbol:'600176.SH',name:'fixture',weight:20,costPrice:cost}]}}]});
+describe('portfolio migration',()=>{
+ it('retains a plan when concurrent deletions would remove both',()=>{const one=state('10');const two={...one,plans:[...one.plans,{...one.plans[0],id:'two'}]};const merged=mergePortfolioPlans(one,{activeId:'two',plans:[two.plans[1]]},two);expect(merged.plans).toHaveLength(1);expect(merged.activeId).toBe(merged.plans[0].id)});
+ it('preserves both conflicting edits without duplicating on retry',()=>{const merged=mergePortfolioPlans(state('12'),state('11'));expect(merged.plans).toHaveLength(2);expect(merged.plans.map(p=>p.draft.holdings[0].costPrice)).toEqual(['11','12']);expect(mergePortfolioPlans(state('12'),merged).plans).toHaveLength(2)});
+ it('uses three-way reconciliation and respects explicit removals',()=>{const base=state('10');expect(mergePortfolioPlans(state('12'),base,base)).toEqual(state('12'));expect(mergePortfolioPlans(base,state('11'),base)).toEqual(state('11'));const two={...base,plans:[...base.plans,{...base.plans[0],id:'two'}]};expect(mergePortfolioPlans(two,base,two).plans).toHaveLength(1)});
+});

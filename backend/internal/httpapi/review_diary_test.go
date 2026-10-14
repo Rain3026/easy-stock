@@ -1,3 +1,5 @@
+// Tests below exercise retained historical handlers directly. Public writes
+// are retired and covered by TestDailyResearchRetiresLegacyWrites.
 package httpapi
 
 import (
@@ -44,14 +46,14 @@ func TestReviewDiaryImportAndList(t *testing.T) {
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/import", strings.NewReader(`{"url":"https://www.tgb.cn/a/1"}`))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
-	server.ServeHTTP(recorder, request)
+	server.mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusCreated {
 		t.Fatalf("import status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
 
 	listRequest := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/posts?source=taoguba&q=%E6%83%85%E7%BB%AA", nil)
 	listRecorder := httptest.NewRecorder()
-	server.ServeHTTP(listRecorder, listRequest)
+	server.mux.ServeHTTP(listRecorder, listRequest)
 	if listRecorder.Code != http.StatusOK {
 		t.Fatalf("list status=%d body=%s", listRecorder.Code, listRecorder.Body.String())
 	}
@@ -68,14 +70,14 @@ func TestReviewDiaryImportAndList(t *testing.T) {
 
 	deleteRequest := httptest.NewRequest(http.MethodDelete, "/api/v1/reviews/posts/review-1", nil)
 	deleteRecorder := httptest.NewRecorder()
-	server.ServeHTTP(deleteRecorder, deleteRequest)
+	server.mux.ServeHTTP(deleteRecorder, deleteRequest)
 	if deleteRecorder.Code != http.StatusOK {
 		t.Fatalf("delete status=%d body=%s", deleteRecorder.Code, deleteRecorder.Body.String())
 	}
 
 	emptyRequest := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/posts", nil)
 	emptyRecorder := httptest.NewRecorder()
-	server.ServeHTTP(emptyRecorder, emptyRequest)
+	server.mux.ServeHTTP(emptyRecorder, emptyRequest)
 	if emptyRecorder.Code != http.StatusOK || !strings.Contains(emptyRecorder.Body.String(), `"total":0`) {
 		t.Fatalf("empty list status=%d body=%s", emptyRecorder.Code, emptyRecorder.Body.String())
 	}
@@ -100,7 +102,7 @@ func TestReviewDiaryDeleteAuthorAndAllPosts(t *testing.T) {
 	server := NewServer(Config{ReviewStore: store})
 	request := httptest.NewRequest(http.MethodDelete, "/api/v1/reviews/authors/author-delete?source=official", nil)
 	recorder := httptest.NewRecorder()
-	server.ServeHTTP(recorder, request)
+	server.mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK || !strings.Contains(recorder.Body.String(), `"posts_deleted":2`) {
 		t.Fatalf("delete author status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
@@ -111,7 +113,7 @@ func TestReviewDiaryDeleteAuthorAndAllPosts(t *testing.T) {
 
 	missingRequest := httptest.NewRequest(http.MethodDelete, "/api/v1/reviews/authors/author-delete?source=official", nil)
 	missingRecorder := httptest.NewRecorder()
-	server.ServeHTTP(missingRecorder, missingRequest)
+	server.mux.ServeHTTP(missingRecorder, missingRequest)
 	if missingRecorder.Code != http.StatusNotFound {
 		t.Fatalf("missing author status=%d body=%s", missingRecorder.Code, missingRecorder.Body.String())
 	}
@@ -121,7 +123,7 @@ func TestReviewSourcesPutWechatLastAndMarkAutomaticSyncUnavailable(t *testing.T)
 	server := NewServer(nil)
 	request := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/sources", nil)
 	recorder := httptest.NewRecorder()
-	server.ServeHTTP(recorder, request)
+	server.mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("sources status=%d body=%s", recorder.Code, recorder.Body.String())
 	}
@@ -156,7 +158,7 @@ func TestReviewDailySummaryWindowEndpoints(t *testing.T) {
 
 	windowRequest := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/daily-summary/window", nil)
 	windowRecorder := httptest.NewRecorder()
-	server.ServeHTTP(windowRecorder, windowRequest)
+	server.mux.ServeHTTP(windowRecorder, windowRequest)
 	if windowRecorder.Code != http.StatusOK {
 		t.Fatalf("window status=%d body=%s", windowRecorder.Code, windowRecorder.Body.String())
 	}
@@ -175,7 +177,7 @@ func TestReviewDailySummaryWindowEndpoints(t *testing.T) {
 	createRequest := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/daily-summary", strings.NewReader(`{"force":true,"window_start":"`+start+`","window_end":"`+end+`"}`))
 	createRequest.Header.Set("Content-Type", "application/json")
 	createRecorder := httptest.NewRecorder()
-	server.ServeHTTP(createRecorder, createRequest)
+	server.mux.ServeHTTP(createRecorder, createRequest)
 	if createRecorder.Code != http.StatusAccepted {
 		t.Fatalf("create status=%d body=%s", createRecorder.Code, createRecorder.Body.String())
 	}
@@ -192,21 +194,21 @@ func TestReviewDailySummaryWindowEndpoints(t *testing.T) {
 	query := url.Values{"window_start": {start}, "window_end": {end}}.Encode()
 	statusRequest := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/daily-summary/status?"+query, nil)
 	statusRecorder := httptest.NewRecorder()
-	server.ServeHTTP(statusRecorder, statusRequest)
+	server.mux.ServeHTTP(statusRecorder, statusRequest)
 	if statusRecorder.Code != http.StatusOK || !strings.Contains(statusRecorder.Body.String(), `"window_start"`) {
 		t.Fatalf("status=%d body=%s", statusRecorder.Code, statusRecorder.Body.String())
 	}
 
 	summaryRequest := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/daily-summary?"+query, nil)
 	summaryRecorder := httptest.NewRecorder()
-	server.ServeHTTP(summaryRecorder, summaryRequest)
+	server.mux.ServeHTTP(summaryRecorder, summaryRequest)
 	if summaryRecorder.Code != http.StatusOK {
 		t.Fatalf("summary status=%d body=%s", summaryRecorder.Code, summaryRecorder.Body.String())
 	}
 
 	badRequest := httptest.NewRequest(http.MethodGet, "/api/v1/reviews/daily-summary/status?window_start="+url.QueryEscape(start), nil)
 	badRecorder := httptest.NewRecorder()
-	server.ServeHTTP(badRecorder, badRequest)
+	server.mux.ServeHTTP(badRecorder, badRequest)
 	if badRecorder.Code != http.StatusBadRequest {
 		t.Fatalf("bad status=%d body=%s", badRecorder.Code, badRecorder.Body.String())
 	}
@@ -233,7 +235,7 @@ func TestReviewDailySummaryAnonymizeUsesHermesAndReturnsReplacements(t *testing.
 	request := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/daily-summary/anonymize", strings.NewReader(`{"summary":{"author_views":[{"author":"作者甲"}],"market_analysis":"作者甲认为甲老师关注股票代码"}}`))
 	request.Header.Set("Content-Type", "application/json")
 	recorder := httptest.NewRecorder()
-	server.ServeHTTP(recorder, request)
+	server.mux.ServeHTTP(recorder, request)
 	if recorder.Code != http.StatusOK {
 		t.Fatalf("anonymize status=%d body=%s", recorder.Code, recorder.Body.String())
 	}

@@ -15,13 +15,16 @@ import (
 
 	"easy-stock/backend/internal/agent"
 	"easy-stock/backend/internal/appsettings"
+	"easy-stock/backend/internal/datahub"
 	"easy-stock/backend/internal/foundation"
 	"easy-stock/backend/internal/marketemotion"
+	"easy-stock/backend/internal/marketpulse"
 	"easy-stock/backend/internal/methodology"
 	"easy-stock/backend/internal/notification"
 	"easy-stock/backend/internal/portfolioinspection"
 	"easy-stock/backend/internal/portfoliooptimization"
 	"easy-stock/backend/internal/providers/cls"
+	"easy-stock/backend/internal/providers/cninfo"
 	"easy-stock/backend/internal/providers/duanxianxia"
 	"easy-stock/backend/internal/providers/eastmoney"
 	futurespositionprovider "easy-stock/backend/internal/providers/futuresposition"
@@ -38,6 +41,9 @@ import (
 )
 
 type Server struct {
+	sourceMonitor            *datahub.Monitor
+	dailyResearch            *dailyResearchEngine
+	dailyOverview            *dailyOverviewEngine
 	ladderThemeAI            *ladderThemeAI
 	mux                      *http.ServeMux
 	token                    string
@@ -104,21 +110,30 @@ func NewServer(config any) *Server {
 		cfg.Logger = log.Default()
 	}
 	var startupErrors []error
+	pulseClient := marketpulse.New(func() string {
+		if cfg.SettingsStore == nil {
+			return ""
+		}
+		return cfg.SettingsStore.Snapshot().Credentials.TushareToken
+	}, "")
 	sinaClient := sina.NewClient()
 	eastMoneyClient := eastmoney.NewClient()
 	tencentClient := tencent.NewClient()
 	clsClient := cls.NewClient()
+	pulseClient.BreadthFallback = eastMoneyClient
+	pulseClient.BreadthSecondary = sinaClient
+	pulseClient.SecondaryFallback = sinaClient
 	if cfg.Realtime == nil {
 		if cfg.StockValuation == nil {
 			cfg.StockValuation = tencentClient
 		}
-		cfg.Realtime = sinaClient
+		cfg.Realtime = datahub.NewQuoteRouter([]datahub.QuoteRoute{{Family: "tushare", Provider: pulseClient}, {Family: "sina", Provider: sinaClient}, {Family: "tencent", Provider: tencentClient}})
 	}
 	if cfg.KLinePrimary == nil {
 		cfg.KLinePrimary = eastMoneyClient
 	}
 	if cfg.KLineFallback == nil {
-		cfg.KLineFallback = sinaClient
+		cfg.KLineFallback = &datahub.KLineChain{Providers: []datahub.KLineProvider{tencentClient, pulseClient}}
 	}
 	if cfg.News == nil {
 		if cfg.StockNews == nil {
@@ -165,12 +180,13 @@ func NewServer(config any) *Server {
 		cfg.IndustryStocks = tencentClient
 	}
 	if cfg.MarketOverview == nil {
-		cfg.MarketOverview = marketoverviewprovider.New(eastMoneyClient, tencentClient, tencentClient, sinaClient)
+		cfg.MarketOverview = marketoverviewprovider.New(eastMoneyClient, tencentClient, tencentClient, sinaClient).
+			WithAnnouncements(cninfo.NewClient()).WithReports(sinaClient, pulseClient).WithIndexQuotes(sinaClient).WithIndexSeries(sinaClient).WithMargin(pulseClient).WithBillboard(pulseClient)
 	}
 	if cfg.SectorMap == nil {
 		mapper := sector.NewMapper(
 			eastMoneyClient,
-			sector.WithQuoteProvider(sinaClient),
+			sector.WithQuoteProvider(cfg.Realtime),
 			sector.WithLimitUpProvider(cfg.LimitUp),
 			sector.WithStockCatalogProvider(eastMoneyClient),
 		)
@@ -368,7 +384,7 @@ func NewServer(config any) *Server {
 	if s.themeRadarStore != nil {
 		if payload, err := s.themeRadarStore.LoadLadder(context.Background()); err == nil && len(payload) > 0 {
 			var cached shortTermProgress[limitUpLadderData]
-			if json.Unmarshal(payload, &cached) == nil && cached.Data != nil {
+			if json.Unmarshal(payload, &cached) == nil && usableLadderDate(cached.Data, time.Now()) {
 				cached.Refreshing, cached.Stale = false, true
 				cached.Data.Meta.Stale = true
 				if cached.Data.Intraday != nil {
@@ -400,10 +416,16 @@ func NewServer(config any) *Server {
 	s.reviewScheduler = review.NewDailyScheduler(cfg.ReviewStore, s.reviewAutomation, cfg.ReviewCalendar)
 	s.reviewAutomation.SetDailySummaryCompleted(s.notifyDailySummary)
 	s.portfolioOptimization = portfoliooptimization.NewService(cfg.PortfolioStore, usageGateway, portfoliooptimization.Dependencies{Collect: s.collectOptimizationUniverse, Research: s.resolvePortfolioResearch, Quotes: s.refreshOptimizationQuotes})
-	s.portfolioExpectation = portfolioinspection.NewExpectationService(cfg.PortfolioStore, cfg.ReviewStore, usageGateway, s.analyzeStock, cfg.Logger, s.analyzeHoldingResearch)
+	s.initDailyResearch(cfg)
+	if service, ok := s.agentGateway.(*agent.Service); ok {
+		service.SetSkillResolver(s.dailyResearch.store.Skills().Resolve)
+	}
+	s.initDailyOverview(cfg, pulseClient)
+	s.initSourceMonitor(cfg)
+	s.portfolioExpectation = portfolioinspection.NewExpectationService(cfg.PortfolioStore, researchSummarySource{store: s.dailyResearch.store}, usageGateway, s.analyzeStock, cfg.Logger, s.analyzeHoldingResearch)
 	s.themeIndex = cfg.ThemeIndex
 	if s.themeIndex == nil {
-		history := &themeIndexHistory{primary: eastMoneyClient, fallback: tencentClient}
+		history := &themeIndexHistory{primary: eastMoneyClient, fallback: &datahub.KLineChain{Providers: []datahub.KLineProvider{tencentClient, pulseClient}}}
 		s.themeIndex = themeindex.New(themeindex.Config{
 			Boards: eastMoneyClient,
 			Resolve: func(ctx context.Context, theme, snapshot string) (foundation.ThemeIndexTarget, error) {
@@ -431,6 +453,9 @@ func (s *Server) StartupError() error {
 }
 
 func (s *Server) Close() error {
+	if s != nil && s.sourceMonitor != nil {
+		s.sourceMonitor.Close()
+	}
 	if s != nil && s.themeProgress != nil {
 		s.themeProgress.close()
 	}
@@ -450,6 +475,7 @@ func (s *Server) Close() error {
 		s.portfolioScheduler.Close()
 	}
 	var closeErrors []error
+	closeErrors = append(closeErrors, s.dailyResearch.close())
 	if s.notifications != nil {
 		s.notifications.Close()
 	}
@@ -496,24 +522,18 @@ func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		writeError(loggedWriter, http.StatusUnauthorized, "unauthorized")
 		return
 	}
+	// Old archives stay readable, but no old client can restart collection or
+	// invoke the retired author-summary model jobs.
+	if strings.HasPrefix(r.URL.Path, "/api/v1/reviews/") && !strings.HasPrefix(r.URL.Path, "/api/v1/reviews/portfolio-expectations") && r.URL.Path != "/api/v1/reviews/import" && r.Method != http.MethodGet && r.Method != http.MethodHead {
+		writeError(loggedWriter, http.StatusGone, "大V复盘功能已停用；历史资料保留，请使用每日研究")
+		return
+	}
 	s.mux.ServeHTTP(loggedWriter, r)
 }
 
-func (s *Server) RunReviewScheduler(ctx context.Context) {
-	if s.reviewAutomation != nil {
-		s.logSchedulerLifecycle(ctx, "reviews", "subscription_sync", func() {
-			s.reviewAutomation.RunScheduler(ctx, s.logger)
-		})
-	}
-}
-
-func (s *Server) RunRemoteDailyReviewScheduler(ctx context.Context) {
-	if s.remoteDailySync != nil {
-		s.logSchedulerLifecycle(ctx, "reviews", "remote_daily_sync", func() {
-			s.remoteDailySync.Run(ctx, s.logger)
-		})
-	}
-}
+// Retained for embedded callers; author collection is retired.
+func (s *Server) RunReviewScheduler(ctx context.Context)            {}
+func (s *Server) RunRemoteDailyReviewScheduler(ctx context.Context) {}
 
 func (s *Server) RunMarketEmotionScheduler(ctx context.Context) {
 	if s.marketEmotion != nil {
@@ -566,8 +586,18 @@ func (s *Server) refreshMasterySnapshot(ctx context.Context, force bool) {
 }
 
 func (s *Server) routes() {
+	s.dailyResearchRoutes()
+	s.evidenceRoutes()
+	s.agentEvidenceRoutes()
+	s.skillLifecycleRoutes()
+	s.researchNoteRoutes()
+	s.mux.HandleFunc("POST /api/v1/research/skill-candidates/generate", s.generateSkillCandidate)
+	s.mux.HandleFunc("POST /api/v1/research/contexts", s.researchContext)
+	s.portfolioPlanRoutes()
 	s.mux.HandleFunc("GET /api/health", s.health)
 	s.mux.HandleFunc("GET /api/v1/sources", s.sources)
+	s.mux.HandleFunc("POST /api/v1/sources/probe", s.sourcesProbe)
+	s.mux.HandleFunc("GET /api/v1/data/capabilities", s.dataCapabilities)
 	s.mux.HandleFunc("GET /api/v1/quotes/realtime", s.realtime)
 	s.mux.HandleFunc("GET /api/v1/quotes/kline", s.kline)
 	s.mux.HandleFunc("GET /api/v1/quotes/kline/batch", s.klineBatch)
@@ -677,20 +707,6 @@ func (s *Server) health(w http.ResponseWriter, r *http.Request) {
 		"ok":   true,
 		"name": "easy-stock data foundation",
 		"time": time.Now(),
-	})
-}
-
-func (s *Server) sources(w http.ResponseWriter, r *http.Request) {
-	writeJSON(w, http.StatusOK, map[string]any{
-		"sources": []foundation.SourceHealth{
-			{ID: "duanxianxia", Name: "短线侠 / 开盘啦", Category: "theme,leaders,limit-up,concept", OK: true, CheckedAt: time.Now()},
-			{ID: "eastmoney", Name: "东方财富", Category: "quote,kline,f10,report", OK: true, CheckedAt: time.Now()},
-			{ID: "sina", Name: "新浪财经", Category: "quote,kline,money-flow", OK: true, CheckedAt: time.Now()},
-			{ID: "tencent", Name: "腾讯财经", Category: "quote,index,hk", OK: true, CheckedAt: time.Now()},
-			{ID: "cls", Name: "财联社", Category: "news,calendar", OK: true, CheckedAt: time.Now()},
-			{ID: "tradingview", Name: "TradingView", Category: "news", OK: true, CheckedAt: time.Now()},
-			{ID: "tushare", Name: "Tushare", Category: "basic,daily,index", OK: false, Message: "requires token", CheckedAt: time.Now()},
-		},
 	})
 }
 
@@ -805,13 +821,24 @@ func (s *Server) klineBatch(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) loadKLine(ctx context.Context, symbol string, period string, limit int) ([]foundation.KLine, error) {
-	lines, err := s.kLinePrimary.KLine(ctx, symbol, period, limit)
-	if err == nil {
+	primaryCtx, cancel := context.WithTimeout(ctx, 8*time.Second)
+	lines, err := s.kLinePrimary.KLine(primaryCtx, symbol, period, limit)
+	cancel()
+	if err == nil && len(lines) > 0 {
 		return normalizeKLinePeriod(lines, period), nil
+	}
+	if s.kLineFallback == nil {
+		return nil, fmt.Errorf("K线首选来源无有效数据，未配置备用")
 	}
 	lines, err = s.kLineFallback.KLine(ctx, symbol, period, limit)
 	if err != nil {
 		return nil, err
+	}
+	if len(lines) == 0 {
+		return nil, fmt.Errorf("K线主备来源均无有效数据")
+	}
+	for i := range lines {
+		lines[i].Meta.FallbackReason = "首选 K线来源不可用，已使用备用价格序列；" + lines[i].Meta.FallbackReason
 	}
 	return normalizeKLinePeriod(lines, period), nil
 }

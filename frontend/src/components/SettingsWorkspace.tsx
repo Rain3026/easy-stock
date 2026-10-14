@@ -1,3 +1,6 @@
+import { SkillLifecycle } from './SkillLifecycle';
+import { runtimeLabel } from '../lib/runtime-label';
+import { DataSourcesPanel } from './DataSourcesPanel';
 import {
 	Bot,
 	CheckCircle2,
@@ -18,27 +21,30 @@ import {
 	Save,
 	Server,
 	Trash2,
-	X,
+	Bell, Puzzle, Scale, Download, ShieldCheck,
 } from 'lucide-react';
-import { FormEvent, useEffect, useMemo, useRef, useState } from 'react';
-import { AppSettings, BackendConfig, BackendRequestError, BrowserAuthStatus, LLMConnectionTestResult, LLMModelOption, LLMModelsResult, LLMProfile, ReviewAutomationProfile, RuntimeLogStatus, SecretSettingStatus, WechatServiceStatus, requestJSON } from '../lib/backend';
+import { FormEvent, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppSettings, BackendConfig, BackendRequestError, LLMConnectionTestResult, LLMModelOption, LLMModelsResult, LLMProfile, RuntimeLogStatus, SecretSettingStatus, requestJSON } from '../lib/backend';
 import { llmBaseURLForAPIMode, llmProviderDefinition, llmProviders } from '../lib/llm-providers';
 import { AppUpdatePanel } from './AppUpdatePanel';
 import { AgentSettingsPanel } from './AgentSettingsPanel';
 import { SettingsSection } from './SettingsSection';
+import { ResearchSettingsPanel } from './ResearchSettingsPanel';
+import './daily-research.css';
 import { NotificationSettingsPanel } from './NotificationSettingsPanel';
+import { SettingsPageContext, SettingsFooter, useSettingsDraft } from './SettingsPageLayout';
+import { settingsTabs, settingsUpdateForTab, type SettingsTab } from '../lib/settings-workspace';
+import './settings-workspace.css';
 
 type Props = {
 	config: BackendConfig | null;
-	open: boolean;
-	initialSection?: 'updates' | 'notifications';
-	onClose: () => void;
+	active: boolean;
+	tab: SettingsTab;
+	onTabChange: (tab: SettingsTab) => void;
 	onSaved?: () => void;
 };
 
 type SecretKey = 'llm_api_key' | 'tushare_token' | 'ths_cookie' | 'xueqiu_cookie' | 'eastmoney_cookie' | 'wechat_api_token';
-type ReviewSource = 'wechat' | 'xueqiu' | 'taoguba';
-type ReviewProfileDraft = Omit<ReviewAutomationProfile, 'credential'> & { credential: SecretSettingStatus; credential_value: string; clear_credential: boolean };
 type ModelListState = 'idle' | 'loading' | 'success' | 'error';
 
 const manualModelOption = '__manual_model_input__';
@@ -53,7 +59,7 @@ const emptySecrets = (): Record<SecretKey, string> => ({
 	wechat_api_token: '',
 });
 
-export function SettingsDrawer({ config, open, initialSection, onClose, onSaved }: Props) {
+export function SettingsWorkspace({ config, active, tab, onTabChange, onSaved }: Props) {
 	const [settings, setSettings] = useState<AppSettings | null>(null);
 	const [agentRuntime, setAgentRuntime] = useState('hermes');
 	const [llmProfiles, setLLMProfiles] = useState<LLMProfile[]>([]);
@@ -66,56 +72,61 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 	const [model, setModel] = useState('');
 	const [apiMode, setAPIMode] = useState<string>(llmProviderDefinition('openai').apiMode);
 	const [responseTimeoutSeconds, setResponseTimeoutSeconds] = useState(defaultResponseTimeoutSeconds);
-	const [reviewSource, setReviewSource] = useState<ReviewSource>('xueqiu');
-	const [reviewProfiles, setReviewProfiles] = useState<ReviewProfileDraft[]>([]);
 	const [secrets, setSecrets] = useState<Record<SecretKey, string>>(emptySecrets);
 	const [clearSecrets, setClearSecrets] = useState<Set<SecretKey>>(new Set());
 	const [state, setState] = useState<'idle' | 'loading' | 'saving' | 'saved' | 'error'>('idle');
 	const [message, setMessage] = useState('');
+	const [messageScope, setMessageScope] = useState<SettingsTab>('model');
 	const [testState, setTestState] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
 	const [testResult, setTestResult] = useState<LLMConnectionTestResult | null>(null);
 	const [modelOptions, setModelOptions] = useState<LLMModelOption[]>([]);
 	const [modelListState, setModelListState] = useState<ModelListState>('idle');
 	const [modelListMessage, setModelListMessage] = useState('');
 	const [manualModel, setManualModel] = useState(true);
-	const [browserAuthStatuses, setBrowserAuthStatuses] = useState<Record<string, BrowserAuthStatus>>({});
-	const [openingBrowserProfile, setOpeningBrowserProfile] = useState('');
-	const [wechatServiceStatus, setWechatServiceStatus] = useState<WechatServiceStatus>({ available: false, configured: false, authenticated: false, state: 'starting', message: '内置微信公众号服务正在启动' });
-	const [wechatLoginURL, setWechatLoginURL] = useState('');
-	const [wechatLoginBaseline, setWechatLoginBaseline] = useState('');
 	const [runtimeLogStatus, setRuntimeLogStatus] = useState<RuntimeLogStatus | null>(null);
 	const [openingRuntimeLogs, setOpeningRuntimeLogs] = useState(false);
 	const modelFetchSequence = useRef(0);
-	const updateSectionRef = useRef<HTMLDivElement>(null);
- const notificationSectionRef = useRef<HTMLDivElement>(null);
-	const updateSectionFocused = useRef(false);
+	const [footer, setFooter] = useState<HTMLDivElement | null>(null);
+	const [visited, setVisited] = useState<Set<SettingsTab>>(() => new Set([tab]));
+	const [dirtyTabs, setDirtyTabs] = useState<Partial<Record<SettingsTab, boolean>>>({});
+	const [loadRevision, setLoadRevision] = useState(0);
+	const [secretRevision, setSecretRevision] = useState(0);
+	const panelRefs = useRef<Partial<Record<SettingsTab, HTMLDivElement | null>>>({});
+	const tabRefs = useRef<Partial<Record<SettingsTab, HTMLButtonElement | null>>>({});
+	const reportDirty = useCallback((id: SettingsTab, dirty: boolean) => setDirtyTabs(prev => prev[id] === dirty ? prev : { ...prev, [id]: dirty }), []);
+	const contexts = useMemo(() => Object.fromEntries(settingsTabs.map(id => [id, { active: active && tab === id, footer, reportDirty: (dirty: boolean) => reportDirty(id, dirty) }])) as Record<SettingsTab, { active: boolean; footer: HTMLDivElement | null; reportDirty: (dirty: boolean) => void }>, [active, tab, footer, reportDirty]);
+	useEffect(() => { setVisited(prev => prev.has(tab) ? prev : new Set([...prev, tab])); }, [tab]);
+	useEffect(() => { if (panelRefs.current[tab]) panelRefs.current[tab]!.scrollTop = 0; }, [tab]);
+	const hasDrafts = Object.values(dirtyTabs).some(Boolean);
+	useEffect(() => {
+		if (!hasDrafts) return;
+		const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ''; };
+		window.addEventListener('beforeunload', warn);
+		return () => window.removeEventListener('beforeunload', warn);
+	}, [hasDrafts]);
+	const modelDraftValue = { agentRuntime, llmProfiles, activeLLMProfileID, profileName, provider, baseURL, model, apiMode, responseTimeoutSeconds, profileKeyValues, clearProfileKeys: [...clearProfileKeys] };
+	const modelDraft = useSettingsDraft(modelDraftValue, value => {
+		setAgentRuntime(value.agentRuntime); setLLMProfiles(value.llmProfiles); setActiveLLMProfileID(value.activeLLMProfileID);
+		setProfileName(value.profileName); setProvider(value.provider); setBaseURL(value.baseURL); setModel(value.model); setAPIMode(value.apiMode);
+		setResponseTimeoutSeconds(value.responseTimeoutSeconds); setProfileKeyValues(value.profileKeyValues); setClearProfileKeys(new Set(value.clearProfileKeys));
+		setSecretRevision(n => n + 1); resetModelList(); setTestState('idle'); setTestResult(null); setMessage('');
+	});
+	const dataDraft = useSettingsDraft({ secrets, clearSecrets: [...clearSecrets] }, value => { setSecrets(value.secrets); setClearSecrets(new Set(value.clearSecrets)); setSecretRevision(n => n + 1); setMessage(''); });
+	useEffect(() => { reportDirty('model', modelDraft.dirty); }, [modelDraft.dirty, reportDirty]);
+	useEffect(() => { reportDirty('data', dataDraft.dirty); }, [dataDraft.dirty, reportDirty]);
+	const acceptModel = (data: AppSettings) => {
+		const profiles = normalizeLLMProfiles(data);
+		const selected = profiles.find(p => p.id === data.active_llm_profile_id) || profiles[0];
+		const profileProvider = selected.provider || 'openai';
+		const profileMode = selected.api_mode === 'responses' ? 'codex_responses' : selected.api_mode || (profileProvider === 'anthropic' ? 'anthropic_messages' : 'chat_completions');
+		setAgentRuntime(data.agent_runtime || 'hermes'); setLLMProfiles(profiles); setActiveLLMProfileID(selected.id); loadProfileFields(selected);
+		setResponseTimeoutSeconds(data.llm.response_timeout_seconds || defaultResponseTimeoutSeconds); setProfileKeyValues({}); setClearProfileKeys(new Set());
+		modelDraft.accept({ agentRuntime: data.agent_runtime || 'hermes', llmProfiles: profiles, activeLLMProfileID: selected.id, profileName: selected.name, provider: profileProvider, baseURL: selected.base_url || llmBaseURLForAPIMode(profileProvider, '', profileMode), model: selected.model || '', apiMode: profileMode, responseTimeoutSeconds: data.llm.response_timeout_seconds || defaultResponseTimeoutSeconds, profileKeyValues: {}, clearProfileKeys: [] });
+	};
+	const acceptData = () => { setSecrets(emptySecrets()); setClearSecrets(new Set()); dataDraft.accept({ secrets: emptySecrets(), clearSecrets: [] }); };
 
 	useEffect(() => {
-		if (!open || !initialSection || state === 'loading') {
-			updateSectionFocused.current = false;
-			return;
-		}
-		if (updateSectionFocused.current) return;
-		const target = initialSection === 'notifications' ? notificationSectionRef : updateSectionRef;
-  const section = target.current?.querySelector('details');
-		if (!section) return;
-		section.open = true;
-		section.scrollIntoView({ block: 'start' });
-		section.querySelector('summary')?.focus({ preventScroll: true });
-		updateSectionFocused.current = true;
-	}, [open, initialSection, state]);
-
-	useEffect(() => {
-		if (!open) return;
-		const onKeyDown = (event: KeyboardEvent) => {
-			if (event.key === 'Escape') onClose();
-		};
-		window.addEventListener('keydown', onKeyDown);
-		return () => window.removeEventListener('keydown', onKeyDown);
-	}, [onClose, open]);
-
-	useEffect(() => {
-		if (!open || !config) return;
+		if (!config) return;
 		let cancelled = false;
 		modelFetchSequence.current += 1;
 		setState('loading');
@@ -130,20 +141,8 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 			.then((payload) => {
 				if (cancelled) return;
 				setSettings(payload.data);
-		setAgentRuntime(payload.data.agent_runtime || 'hermes');
-				const modelProfiles = normalizeLLMProfiles(payload.data);
-				setLLMProfiles(modelProfiles);
-				const selected = modelProfiles.find((profile) => profile.id === payload.data.active_llm_profile_id) || modelProfiles[0];
-				setActiveLLMProfileID(selected.id);
-				loadProfileFields(selected);
-				setResponseTimeoutSeconds(payload.data.llm.response_timeout_seconds || defaultResponseTimeoutSeconds);
-				setProfileKeyValues({});
-				setClearProfileKeys(new Set());
-				const profiles = toProfileDrafts(payload.data.review_automation?.profiles || []);
-				setReviewProfiles(profiles);
-				void refreshBrowserAuthStatuses(profiles);
-				setSecrets(emptySecrets());
-				setClearSecrets(new Set());
+				acceptModel(payload.data);
+				acceptData();
 				setState('idle');
 			})
 			.catch((error) => {
@@ -155,38 +154,15 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 			cancelled = true;
 			modelFetchSequence.current += 1;
 		};
-	}, [config, open]);
+	}, [config, loadRevision]);
 
 	useEffect(() => {
-		if (!open || !window.aStock?.getRuntimeLogStatus) {
+		if (!active || tab !== 'logs' || !window.aStock?.getRuntimeLogStatus) {
 			setRuntimeLogStatus(null);
 			return;
 		}
 		void window.aStock.getRuntimeLogStatus().then(setRuntimeLogStatus).catch(() => setRuntimeLogStatus(null));
-	}, [open]);
-
-	useEffect(() => {
-		if (!open) {
-			setWechatLoginURL('');
-			return;
-		}
-		let cancelled = false;
-		const refresh = async () => {
-			const status = await getWechatServiceStatus();
-			if (cancelled) return;
-			setWechatServiceStatus(status);
-			if (wechatLoginURL && status.authenticated && (!wechatLoginBaseline || status.expires_at !== wechatLoginBaseline)) {
-				setWechatLoginURL('');
-				setWechatLoginBaseline('');
-			}
-		};
-		void refresh();
-		const timer = window.setInterval(refresh, wechatLoginURL ? 2000 : 8000);
-		return () => {
-			cancelled = true;
-			window.clearInterval(timer);
-		};
-	}, [open, wechatLoginBaseline, wechatLoginURL]);
+	}, [active, tab]);
 
 	const selectedModelCapability = modelOptions.find((option) => option.id === model)?.reasoning;
 	const selectedLLMProfile = useMemo(() => llmProfiles.find((profile) => profile.id === activeLLMProfileID), [activeLLMProfileID, llmProfiles]);
@@ -351,65 +327,6 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 		}
 	};
 
-	const updateReviewProfile = (id: string, patch: Partial<ReviewProfileDraft>) => setReviewProfiles((current) => current.map((profile) => profile.id === id ? { ...profile, ...patch } : profile));
-	const addReviewProfile = (source: ReviewSource) => setReviewProfiles((current) => [...current, newProfileDraft(source)]);
-	const removeReviewProfile = (id: string) => setReviewProfiles((current) => current.filter((profile) => profile.id !== id));
-
-	const refreshBrowserAuthStatuses = async (profiles: ReviewProfileDraft[]) => {
-		const browserProfiles = profiles.filter((profile) => profile.source === 'xueqiu' || profile.source === 'taoguba');
-		if (!window.aStock?.getBrowserAuthStatus) {
-			setBrowserAuthStatuses(Object.fromEntries(browserProfiles.map((profile) => [profile.id, { configured: false, message: '请在桌面应用中配置浏览器登录态' }])));
-			return;
-		}
-		const statuses = await Promise.all(browserProfiles.map(async (profile) => {
-			try {
-				return [profile.id, await window.aStock!.getBrowserAuthStatus!(profile.id, profile.source as 'xueqiu' | 'taoguba')] as const;
-			} catch (error) {
-				return [profile.id, { configured: false, message: error instanceof Error ? error.message : '读取浏览器登录态失败' }] as const;
-			}
-		}));
-		setBrowserAuthStatuses(Object.fromEntries(statuses));
-	};
-
-	const openReviewSourceLogin = async (profile: ReviewProfileDraft) => {
-		const source = profile.source as 'xueqiu' | 'taoguba';
-		const label = reviewSourceLabel(source);
-		const opener = window.aStock?.openReviewSourceLogin
-			? (id: string, homepageURL: string) => window.aStock!.openReviewSourceLogin!(source, id, homepageURL)
-			: source === 'xueqiu' && window.aStock?.openXueqiuLogin
-				? (id: string, homepageURL: string) => window.aStock!.openXueqiuLogin!(id, homepageURL)
-				: null;
-		if (!opener) {
-			setBrowserAuthStatuses((current) => ({ ...current, [profile.id]: { configured: false, message: '内置登录窗口仅在桌面应用中可用' } }));
-			return;
-		}
-		setOpeningBrowserProfile(profile.id);
-		setBrowserAuthStatuses((current) => ({ ...current, [profile.id]: { ...current[profile.id], configured: current[profile.id]?.configured || false, message: `登录窗口已打开；完成${label}登录或安全验证后，点击“我已完成登录”` } }));
-		try {
-			const status = await opener(profile.id, profile.base_url || (source === 'xueqiu' ? 'https://xueqiu.com' : 'https://www.tgb.cn'));
-			setBrowserAuthStatuses((current) => ({ ...current, [profile.id]: status }));
-		} catch (error) {
-			setBrowserAuthStatuses((current) => ({ ...current, [profile.id]: { configured: false, message: error instanceof Error ? error.message : `打开${label}登录窗口失败` } }));
-		} finally {
-			setOpeningBrowserProfile('');
-		}
-	};
-
-	const openWechatLogin = async () => {
-		if (!window.aStock?.openWechatLogin) {
-			setWechatServiceStatus({ available: false, configured: false, authenticated: false, state: 'error', message: '扫码登录仅在桌面应用中可用' });
-			return;
-		}
-		try {
-			const status = await window.aStock.openWechatLogin();
-			setWechatServiceStatus(status);
-			setWechatLoginBaseline(status.expires_at || '');
-			setWechatLoginURL(status.login_url || '');
-		} catch (error) {
-			setWechatServiceStatus((current) => ({ ...current, state: 'error', message: error instanceof Error ? error.message : '打开微信公众号扫码页面失败' }));
-		}
-	};
-
 	const readSavedModelKey = async (signal: AbortSignal) => {
 		if (!config) throw new Error('后端尚未连接');
 		const payload = await requestJSON<{ data: { api_key: string } }>(config, '/api/v1/settings/llm/api-key/reveal', {
@@ -422,7 +339,7 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 		return payload.data.api_key;
 	};
 
-	const persistSettings = async () => {
+	const persistSettings = async (scope: 'model' | 'data' = 'model') => {
 		if (!config) throw new Error('后端尚未连接');
 		const credentials: Record<string, string> = {};
 		for (const key of ['tushare_token', 'ths_cookie', 'xueqiu_cookie', 'eastmoney_cookie'] as SecretKey[]) {
@@ -435,36 +352,25 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 		const payload = await requestJSON<{ data: AppSettings }>(config, '/api/v1/settings', {
 			method: 'PUT',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ agent_runtime: agentRuntime, llm: { response_timeout_seconds: responseTimeoutSeconds }, llm_profiles: modelProfiles, active_llm_profile_id: activeLLMProfileID, credentials, review_automation: { profiles: reviewProfiles.map((profile) => ({ id: profile.id, source: profile.source, name: profile.name.trim(), base_url: profile.source === 'wechat' ? '' : profile.base_url.trim(), credential: profile.source === 'wechat' ? undefined : profile.credential_value.trim() || undefined, clear_credential: profile.source === 'wechat' || profile.clear_credential, sync_hour: profile.sync_hour, auto_analyze: profile.auto_analyze, enabled: profile.enabled })) }, clear_secrets: [...clearSecrets].filter((key) => key !== 'llm_api_key').concat('wechat_api_token') }),
+			body: JSON.stringify(settingsUpdateForTab(scope, { agent_runtime: agentRuntime, llm: { response_timeout_seconds: responseTimeoutSeconds }, llm_profiles: modelProfiles, active_llm_profile_id: activeLLMProfileID, credentials, clear_secrets: [...clearSecrets].filter((key) => key !== 'llm_api_key') })),
 		});
 		setSettings(payload.data);
-		setAgentRuntime(payload.data.agent_runtime || 'hermes');
-		const savedProfiles = normalizeLLMProfiles(payload.data);
-		setLLMProfiles(savedProfiles);
-		const savedActive = savedProfiles.find((profile) => profile.id === payload.data.active_llm_profile_id) || savedProfiles[0];
-		setActiveLLMProfileID(savedActive.id);
-		loadProfileFields(savedActive);
-		setProfileKeyValues({});
-		setClearProfileKeys(new Set());
-		const savedReviewProfiles = toProfileDrafts(payload.data.review_automation?.profiles || []);
-		setReviewProfiles(savedReviewProfiles);
-		void refreshBrowserAuthStatuses(savedReviewProfiles);
-		setSecrets(emptySecrets());
-		setClearSecrets(new Set());
+		if (scope === 'model') acceptModel(payload.data);
+		else acceptData();
 		return payload.data;
 	};
 
-	const save = async (event: FormEvent) => {
+	const save = async (event: FormEvent, scope: 'model' | 'data') => {
 		event.preventDefault();
 		if (!config) return;
 		setState('saving');
+		setMessageScope(scope);
 		setMessage('');
 		try {
-			await persistSettings();
+			await persistSettings(scope);
 			setState('saved');
-			setMessage('保存成功');
+			setMessage(scope === 'model' ? '模型配置已保存' : '数据源配置已保存');
 			onSaved?.();
-			onClose();
 		} catch (error) {
 			setState('error');
 			setMessage(error instanceof Error && error.message ? `保存失败：${error.message}` : '保存失败');
@@ -474,6 +380,7 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 	const testConnection = async () => {
 		if (!config) return;
 		setState('saving');
+		setMessageScope('model');
 		setMessage('正在保存设置并通过 Agent 调用模型探针');
 		setTestState('testing');
 		setTestResult(null);
@@ -504,44 +411,46 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 		}
 	};
 
-	if (!open) return null;
-
-	return (
-		<div className="settings-overlay" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-			<aside className="settings-drawer" role="dialog" aria-modal="true" aria-label="系统设置">
-				<header className="settings-header">
-					<div><span>AI RUNTIME</span><h2>系统设置</h2><p>管理运行引擎、共享模型、数据源与钉钉和飞书机器人</p></div>
-					<button type="button" onClick={onClose} aria-label="关闭设置"><X size={20} /></button>
-				</header>
-
-				{state === 'loading' && <div className="settings-loading"><LoaderCircle className="spin" size={22} /><span>读取本机设置</span></div>}
-				{state !== 'loading' && (
-					<form className="settings-form" onSubmit={save}>
-						<AgentSettingsPanel config={config} open={open} />
-
-						<SettingsSection title="大模型和运行时配置" description="对话、个股研究、复盘与持仓检查使用同一个引擎选择，模型、Skills 和 MCP 共用一套设置。" icon={<Bot size={18} />}>
+	const labels: Record<SettingsTab, string> = { model: '模型', skills: 'SKILL', mcp: 'MCP', research: '研究', data: '数据源', notifications: '通知', updates: '更新', logs: '日志' };
+	const icons = { model: Bot, skills: Puzzle, mcp: Server, research: Scale, data: Database, notifications: Bell, updates: Download, logs: FolderOpen };
+	const footerFor = (scope: 'model' | 'data') => <SettingsFooter><footer className="settings-footer">
+		<div className={`settings-message ${state}`} role={state === 'error' ? 'alert' : 'status'}>{state === 'saved' ? <CheckCircle2 size={15}/> : state === 'error' ? <CircleAlert size={15}/> : <ShieldCheck size={15}/>}<span>{(messageScope === scope ? message : '') || (dirtyTabs[scope] ? '本页有未保存修改，切换标签或功能页会保留。' : '留空的密钥会保留原值，仅保存当前页配置。')}</span></div>
+		<button type="button" disabled={!(scope === 'model' ? modelDraft.dirty : dataDraft.dirty) || state === 'saving' || testState === 'testing'} onClick={scope === 'model' ? modelDraft.reset : dataDraft.reset}>还原本页</button>
+		<button type="submit" form={`settings-${scope}-form`} className="settings-save" disabled={!settings || state === 'loading' || state === 'saving' || testState === 'testing'}>{state === 'saving' ? <LoaderCircle className="spin" size={16}/> : <Save size={16}/>}保存{labels[scope]}</button>
+	</footer></SettingsFooter>;
+	return <section className="settings-workspace" aria-label="系统设置工作区">
+		<nav className="settings-page-tabs" role="tablist" aria-label="设置分类">{settingsTabs.map((id, index) => { const Icon = icons[id]; return <button type="button" role="tab" id={`settings-tab-${id}`} aria-controls={`settings-panel-${id}`} aria-selected={tab === id} tabIndex={tab === id ? 0 : -1} ref={el => { tabRefs.current[id] = el; }} key={id} onClick={() => { setMessage(''); onTabChange(id); }} onKeyDown={event => {
+			const next = event.key === 'ArrowRight' ? (index + 1) % settingsTabs.length : event.key === 'ArrowLeft' ? (index + settingsTabs.length - 1) % settingsTabs.length : event.key === 'Home' ? 0 : event.key === 'End' ? settingsTabs.length - 1 : -1;
+			if (next < 0) return; event.preventDefault(); setMessage(''); onTabChange(settingsTabs[next]); tabRefs.current[settingsTabs[next]]?.focus();
+		}}><Icon size={17}/><span>{labels[id]}</span>{dirtyTabs[id] && <i className="settings-draft-dot" aria-label="未保存"/>}</button>; })}</nav>
+		{settingsTabs.map(id => <SettingsPageContext.Provider key={id} value={contexts[id]}><div className="settings-tab-panel" role="tabpanel" id={`settings-panel-${id}`} aria-labelledby={`settings-tab-${id}`} hidden={tab !== id} tabIndex={0} ref={el => { panelRefs.current[id] = el; }}>
+		{(visited.has(id) || id === tab) && <>
+		{(id === 'model' || id === 'data') && (!settings ? <div className="settings-page-load" role={state === 'error' ? 'alert' : 'status'}>{state === 'error' ? <><CircleAlert size={22}/><p>{message}</p><button type="button" onClick={() => setLoadRevision(n => n + 1)}>重新读取</button></> : <><LoaderCircle className="spin" size={22}/><p>读取本机设置…</p></>}</div> : id === 'model' ? <form id="settings-model-form" onSubmit={event => void save(event, 'model')}><fieldset className="settings-page-fieldset" disabled={state === 'saving' || testState === 'testing'}>
+						<SettingsSection title="模型与引擎" description="设置新对话与投研任务使用的引擎和模型。" icon={<Bot size={18} />}>
 							<div className="runtime-selector">
 								<span className="runtime-selector-label">运行引擎</span>
 								<div className="runtime-selector-buttons" role="group" aria-label="运行引擎">
 									<button type="button" aria-pressed={agentRuntime === 'hermes'} onClick={() => setAgentRuntime('hermes')}>Hermes</button>
 									<button type="button" aria-pressed={agentRuntime === 'codex'} onClick={() => setAgentRuntime('codex')}>Codex<span className="runtime-beta-badge">Beta</span></button>
+									<button type="button" aria-pressed={agentRuntime === 'workbuddy'} onClick={() => setAgentRuntime('workbuddy')}>WorkBuddy<span className="runtime-beta-badge">Beta</span></button>
 								</div>
 								<small>保存后新对话轮次和新任务使用所选引擎；进行中的任务继续完成。</small>
 							</div>
+                            {agentRuntime === 'workbuddy' && <p className={`model-list-message ${apiMode === 'chat_completions' ? '' : 'error'}`}>使用本机 WorkBuddy 引擎，共享下方模型和 API Key。请选择 Chat Completions 协议；不会调用 WorkBuddy 账号额度。</p>}
                             {agentRuntime === 'codex' && !['auto', 'responses', 'codex_responses'].includes(apiMode) && <p className="model-list-message error">保存时会检测此连接是否支持 Responses；检测通过后统一使用 Responses，不支持时无法启用 Codex。</p>}
-                            {Object.entries(settings?.runtimes || {}).map(([id, status]) => <div key={id} className={`llm-connection-test ${status.available && status.configured ? 'success' : ''}`}><div><Bot size={17} /><span><strong>{id === 'codex' ? 'Codex' : 'Hermes'} {status.version || ''} · {status.available ? '已安装' : '不可用'}</strong><small>{status.message || (status.configured ? '共享模型配置已就绪' : '请配置模型连接')}</small></span></div></div>)}
+                            <div className="settings-runtime-statuses">{Object.entries(settings?.runtimes || {}).map(([id, status]) => <div key={id} className={`llm-connection-test ${status.available && status.configured ? 'success' : ''}`}><div><Bot size={17} /><span><strong>{runtimeLabel(id)} {status.version || ''} · {status.available ? '已安装' : '不可用'}</strong><small>{status.message || (status.configured ? '共享模型配置已就绪' : '请配置模型连接')}</small></span></div></div>)}</div>
                             <div className="llm-profile-toolbar">
 								<label><span>模型配置</span><select value={activeLLMProfileID} onChange={(event) => selectLLMProfile(event.target.value)}>{llmProfiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.name} · {profile.model || llmProviderDefinition(profile.provider).label}</option>)}</select></label>
 								<button type="button" onClick={addLLMProfile}><Plus size={14} />新增配置</button>
 								<button type="button" className="danger" onClick={removeLLMProfile} disabled={llmProfiles.length <= 1}><Trash2 size={14} />删除</button>
 							</div>
-							<label><span>配置名称</span><input value={profileName} onChange={(event) => { setProfileName(event.target.value); patchSelectedLLMProfile({ name: event.target.value }); }} placeholder="例如 DeepSeek 日常 / GPT-5.6 Sol 深度分析" /></label>
+							<label><span>方案名称</span><input value={profileName} onChange={(event) => { setProfileName(event.target.value); patchSelectedLLMProfile({ name: event.target.value }); }} placeholder="例如 DeepSeek 日常 / GPT-5.6 Sol 深度分析" /></label>
 							<div className="settings-grid two-columns">
 								<label><span>服务商</span><select value={provider} onChange={(event) => updateProvider(event.target.value)}>{llmProviders.map((item) => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label>
 								<label><span>接口协议</span><select value={apiMode} onChange={(event) => updateAPIMode(event.target.value)}><option value="codex_responses">Responses API</option><option value="chat_completions">Chat Completions</option><option value="anthropic_messages">Anthropic Messages</option><option value="auto">自动检测（优先 Responses）</option></select></label>
 							</div>
-								<label><span>API Base URL</span><input value={baseURL} onChange={(event) => updateBaseURL(event.target.value)} placeholder="https://api.example.com/v1" />{llmProviderDefinition(provider).protocolBaseURLs && <small>切换协议时同步对应的官方地址；自定义地址保持不变。</small>}</label>
-								<SecretField key={`llm-api-key-${activeLLMProfileID}-${settings?.updated_at}`} label="模型 API Key" secretKey="llm_api_key" status={selectedLLMProfile?.api_key} value={profileKeyValues[activeLLMProfileID] || ''} clearing={clearProfileKeys.has(activeLLMProfileID)} onChange={updateSecret} onClear={toggleClear} hint="已保存密钥默认隐藏，点击眼睛可查看；输入新值可替换当前配置的密钥" revealable readSavedValue={readSavedModelKey} />
+								<label className="settings-api-url"><span>接口地址</span><input value={baseURL} onChange={(event) => updateBaseURL(event.target.value)} placeholder="https://api.example.com/v1" />{llmProviderDefinition(provider).protocolBaseURLs && <small>切换协议时同步对应的官方地址；自定义地址保持不变。</small>}</label>
+								<SecretField key={`llm-api-key-${activeLLMProfileID}-${secretRevision}`} label="模型 API Key" secretKey="llm_api_key" status={selectedLLMProfile?.api_key} value={profileKeyValues[activeLLMProfileID] || ''} clearing={clearProfileKeys.has(activeLLMProfileID)} onChange={updateSecret} onClear={toggleClear} hint="留空保留，输入新值替换" revealable readSavedValue={readSavedModelKey} />
 								<div className="model-field">
 									<span className="model-field-heading"><span>模型</span>{modelListState === 'success' && <button type="button" onClick={() => setManualModel((current) => !current)}>{manualModel ? '使用下拉' : '手动输入'}</button>}</span>
 									<span className="model-picker-row">
@@ -551,109 +460,35 @@ export function SettingsDrawer({ config, open, initialSection, onClose, onSaved 
 									<small className={`model-list-message ${modelListState}`}>{modelListMessage || '请先填写 Base URL 和 API Key，再获取模型列表；也可继续手动输入。'}</small>
 									{selectedModelCapability && <small className="model-list-message">思考选项：{selectedModelCapability.options.map((option) => option.label).join('、')} · {selectedModelCapability.source === 'model_api' ? '来源：模型接口' : selectedModelCapability.source === 'hermes' ? '来源：Hermes 模型目录' : selectedModelCapability.source === 'unknown' ? '能力未确认' : '来源：官方文档'}</small>}
 								</div>
-							<label className="settings-timeout-field"><span>模型响应等待时间（秒）</span><input type="number" min={30} max={3600} step={30} value={responseTimeoutSeconds} onChange={(event) => setResponseTimeoutSeconds(Number(event.target.value) || defaultResponseTimeoutSeconds)} /><small>默认 300 秒，范围 30–3600 秒；模型长时间无响应时将等待更久再重试。</small></label>
+							<label className="settings-timeout-field"><span>响应超时（秒）</span><input type="number" min={30} max={3600} step={30} value={responseTimeoutSeconds} onChange={(event) => setResponseTimeoutSeconds(Number(event.target.value) || defaultResponseTimeoutSeconds)} /><small>默认 300 秒，范围 30–3600 秒；模型长时间无响应时将等待更久再重试。</small></label>
 							<div className={`llm-connection-test ${testState}`}>
-								<div><PlugZap size={17} /><span><strong>{testState === 'success' ? 'Agent 模型连接可用' : testState === 'error' ? '连接测试未通过' : testState === 'testing' ? 'Agent 正在请求模型' : 'Agent 真实模型探针'}</strong><small>{testResult ? `${testResult.runtime === 'codex' ? 'Codex' : 'Hermes'} · ${testResult.model} · ${testResult.api_mode} · ${testResult.latency_ms}ms · ${testResult.response}` : '自动检测会发送一次简短的 Responses 请求；密钥或网络错误会保留原设置。保存后可测试当前引擎。'}</small></span></div>
+								<div><PlugZap size={17} /><span><strong>{testState === 'success' ? 'Agent 模型连接可用' : testState === 'error' ? '连接测试未通过' : testState === 'testing' ? 'Agent 正在请求模型' : 'Agent 真实模型探针'}</strong><small>{testResult ? `${runtimeLabel(testResult.runtime)} · ${testResult.model} · ${testResult.api_mode} · ${testResult.latency_ms}ms · ${testResult.response}` : '自动检测会发送一次简短的 Responses 请求；密钥或网络错误会保留原设置。保存后可测试当前引擎。'}</small></span></div>
 								<button type="button" onClick={testConnection} disabled={!config || state === 'saving' || testState === 'testing'}>{testState === 'testing' ? <LoaderCircle className="spin" size={15} /> : <PlugZap size={15} />}保存并测试连接</button>
 							</div>
 						</SettingsSection>
-
-						<SettingsSection title="大V复盘自动化" description="按平台管理多套采集配置，每个大V订阅可以绑定其中一套。" icon={<Clock3 size={18} />}>
-							<div className="review-profile-tabs">{(['xueqiu', 'taoguba', 'wechat'] as ReviewSource[]).map((source) => <button type="button" className={reviewSource === source ? 'active' : ''} onClick={() => setReviewSource(source)} key={source}>{reviewSourceLabel(source)}<em>{reviewProfiles.filter((profile) => profile.source === source).length}</em></button>)}</div>
-							{reviewSource === 'wechat' && <WechatServiceCard status={wechatServiceStatus} loginURL={wechatLoginURL} onLogin={() => void openWechatLogin()} onCloseLogin={() => { setWechatLoginURL(''); setWechatLoginBaseline(''); }} />}
-							<div className="review-profile-list">
-								{reviewProfiles.filter((profile) => profile.source === reviewSource).map((profile) => <ReviewProfileCard profile={profile} browserAuthStatus={browserAuthStatuses[profile.id]} openingBrowser={openingBrowserProfile === profile.id} onOpenBrowserLogin={() => void openReviewSourceLogin(profile)} onChange={(patch) => updateReviewProfile(profile.id, patch)} onRemove={() => removeReviewProfile(profile.id)} canRemove={profile.source !== 'wechat' || reviewProfiles.filter((item) => item.source === 'wechat').length > 1} key={profile.id} />)}
-								{!reviewProfiles.some((profile) => profile.source === reviewSource) && <div className="review-profile-empty"><strong>还没有{reviewSourceLabel(reviewSource)}配置</strong><span>可以添加多套配置，并让不同大V订阅使用不同登录态或同步时段。</span></div>}
-							</div>
-							{reviewSource !== 'wechat' && <button type="button" className="review-profile-add" onClick={() => addReviewProfile(reviewSource)}><Plus size={14} />添加{reviewSourceLabel(reviewSource)}配置</button>}
-							<p className="settings-field-note">雪球和淘股吧通过内置浏览器保存独立登录态；微信公众号扫码仅用于解析已知文章链接，历史文章列表接口已停用，暂不提供自动订阅。所有登录凭据仅保存在本机。</p>
-						</SettingsSection>
-
-						<SettingsSection title="行情与内容数据源" description="现有公共接口继续直接使用；以下凭据为增强数据与后续接入准备。" icon={<Database size={18} />}>
-							<div className="public-source-status">
-								<span><CheckCircle2 size={14} />东方财富：公共行情已接入</span>
-								<span><CheckCircle2 size={14} />新浪财经：公共行情已接入</span>
-								<span><CheckCircle2 size={14} />财联社：公开资讯已接入</span>
-							</div>
-							<SecretField label="Tushare Pro Token" secretKey="tushare_token" status={settings?.credentials.tushare_token} value={secrets.tushare_token} clearing={clearSecrets.has('tushare_token')} onChange={updateSecret} onClear={toggleClear} hint="预留：基础数据、指数和日线增强" />
+		</fieldset>{footerFor('model')}</form> : <form id="settings-data-form" key={`data-${secretRevision}`} onSubmit={event => void save(event, 'data')}><fieldset className="settings-page-fieldset" disabled={state === 'saving'}>
+<DataSourcesPanel config={config} active={active && tab === 'data'} revision={secretRevision}/>
+<SettingsSection title="行情与资讯凭据" description="保存凭据后可检测相应能力；保存成功不等于接口已通过验证。" icon={<Database size={18} />}>
+							<SecretField label="Tushare Pro Token" secretKey="tushare_token" status={settings?.credentials.tushare_token} value={secrets.tushare_token} clearing={clearSecrets.has('tushare_token')} onChange={updateSecret} onClear={toggleClear} hint="已接入沪深量能、指数和分钟数据；具体接口权限以检测结果为准" />
 							<SecretField label="同花顺 Cookie / Token" secretKey="ths_cookie" status={settings?.credentials.ths_cookie} value={secrets.ths_cookie} clearing={clearSecrets.has('ths_cookie')} onChange={updateSecret} onClear={toggleClear} hint="预留：涨停原因与题材催化数据" />
 							<SecretField label="东方财富 Cookie" secretKey="eastmoney_cookie" status={settings?.credentials.eastmoney_cookie} value={secrets.eastmoney_cookie} clearing={clearSecrets.has('eastmoney_cookie')} onChange={updateSecret} onClear={toggleClear} hint="当前公共行情不需要，预留登录态接口" />
 						</SettingsSection>
-
-						<div ref={notificationSectionRef}><NotificationSettingsPanel config={config} /></div>
-
-						<div ref={updateSectionRef}><AppUpdatePanel /></div>
-
-						<SettingsSection className="runtime-log-section" title="运行日志" description="遇到问题时，可将此目录中的日志文件提供给开发者排查。" icon={<FolderOpen size={18} />}>
+		</fieldset>{footerFor('data')}</form>)}
+		{(id === 'skills' || id === 'mcp') && <AgentSettingsPanel config={config} open section={id} />}
+ {id==='skills'&&<SkillLifecycle config={config}/>}
+		{id === 'research' && <SettingsSection title="多空辨析" description="为多方、空方与审校员分配独立引擎和模型。" icon={<Scale size={18}/>}><ResearchSettingsPanel config={config} sharedSettings={settings}/></SettingsSection>}
+		{id === 'notifications' && <NotificationSettingsPanel config={config}/>}
+		{id === 'updates' && <AppUpdatePanel/>}
+		{id === 'logs' && <SettingsSection className="runtime-log-section" title="运行日志" description="遇到问题时，可将此目录中的日志文件提供给开发者排查。" icon={<FolderOpen size={18} />}>
 							<div className="runtime-log-summary">
 								<span><strong>{runtimeLogStatus?.available ? '日志正在自动保存' : '请在桌面应用中查看日志'}</strong><small>{runtimeLogStatus ? `每个文件最多 ${runtimeLogStatus.max_file_mb} MB，保留 ${runtimeLogStatus.backup_files} 份历史记录；密钥和登录凭据会在写入前隐藏。` : '浏览器开发模式不保存桌面运行日志。'}</small>{runtimeLogStatus?.directory && <code title={runtimeLogStatus.directory}>{runtimeLogStatus.directory}</code>}</span>
 								<button type="button" onClick={() => void openRuntimeLogs()} disabled={!runtimeLogStatus?.available || openingRuntimeLogs}>{openingRuntimeLogs ? <LoaderCircle className="spin" size={15} /> : <FolderOpen size={15} />}打开日志目录</button>
 							</div>
-						</SettingsSection>
-
-						<footer className="settings-footer">
-							<div className={`settings-message ${state}`} role={state === 'error' ? 'alert' : 'status'}>{state === 'saved' && <CheckCircle2 size={15} />}{state === 'error' && <CircleAlert size={15} />}<span>{message || '留空的模型密钥会保留已保存的值。'}</span></div>
-							<button type="button" onClick={onClose}>取消</button>
-							<button type="submit" className="settings-save" disabled={!config || state === 'saving' || testState === 'testing'}>{state === 'saving' ? <LoaderCircle className="spin" size={16} /> : <Save size={16} />}保存设置</button>
-						</footer>
-					</form>
-				)}
-			</aside>
-		</div>
-	);
-}
-
-function WechatServiceCard({ status, loginURL, onLogin, onCloseLogin }: { status: WechatServiceStatus; loginURL: string; onLogin: () => void; onCloseLogin: () => void }) {
-	const ready = status.authenticated;
-	const statusLabel = ready ? '已登录' : status.state === 'expired' ? '登录已过期' : status.state === 'starting' ? '正在启动' : status.available ? '等待扫码' : '服务异常';
-	const expiresAt = status.expires_at ? new Date(status.expires_at).toLocaleString('zh-CN', { hour12: false }) : '';
-	return <div className={`wechat-service-panel ${status.state}`}>
-		<div className="wechat-service-summary">
-			<div className="wechat-service-icon">{status.available ? ready ? <CheckCircle2 size={20} /> : <QrCode size={20} /> : <CircleAlert size={20} />}</div>
-			<span><strong>内置微信公众号服务<em>{statusLabel}</em></strong><small>{status.message}</small>{ready && expiresAt && <i>登录有效期至 {expiresAt}</i>}</span>
-			<button type="button" onClick={onLogin} disabled={!status.available || status.state === 'starting'}>{loginURL ? <LoaderCircle className="spin" size={14} /> : <QrCode size={14} />}{loginURL ? '等待扫码' : ready ? '重新扫码' : '扫码登录'}</button>
-		</div>
-		{loginURL && <div className="wechat-login-embedded">
-			<header><span><QrCode size={14} />请使用微信扫码并在手机上确认</span><button type="button" onClick={onCloseLogin}>关闭扫码</button></header>
-			<webview src={loginURL} partition="persist:a-stock-wechat-login" title="微信公众号扫码登录" />
-		</div>}
-		<p><Server size={12} />服务随 App 自动启动，扫码登录仅用于解析你粘贴的具体文章链接；登录凭据只保存在本机用户数据目录。</p>
-	</div>;
-}
-
-async function getWechatServiceStatus(): Promise<WechatServiceStatus> {
-	if (!window.aStock?.getWechatServiceStatus) {
-		return { available: false, configured: false, authenticated: false, state: 'error', message: '内置微信公众号服务仅在桌面应用中可用' };
-	}
-	try {
-		return await window.aStock.getWechatServiceStatus();
-	} catch (error) {
-		return { available: false, configured: false, authenticated: false, state: 'error', message: error instanceof Error ? error.message : '读取微信公众号服务状态失败' };
-	}
-}
-
-function ReviewProfileCard({ profile, browserAuthStatus, openingBrowser, onOpenBrowserLogin, onChange, onRemove, canRemove }: { profile: ReviewProfileDraft; browserAuthStatus?: BrowserAuthStatus; openingBrowser: boolean; onOpenBrowserLogin: () => void; onChange: (patch: Partial<ReviewProfileDraft>) => void; onRemove: () => void; canRemove: boolean }) {
-	const sourceLabel = reviewSourceLabel(profile.source as ReviewSource);
-	const isWechat = profile.source === 'wechat';
-	const usesBrowserLogin = profile.source === 'xueqiu' || profile.source === 'taoguba';
-	return <article className={`review-profile-card ${profile.enabled ? '' : 'disabled'}`}>
-		<header><div><span className={`review-profile-source ${profile.source}`}>{reviewSourceLabel(profile.source as ReviewSource)}</span><strong>{profile.name || '未命名配置'}</strong></div><div><button type="button" className={profile.enabled ? 'profile-enabled active' : 'profile-enabled'} onClick={() => onChange({ enabled: !profile.enabled })}>{profile.enabled ? '已启用' : '已停用'}</button>{canRemove && <button type="button" className="profile-remove" title="删除配置" onClick={onRemove}><Trash2 size={14} /></button>}</div></header>
-		<div className="review-profile-grid">
-			<label><span>配置名称</span><input value={profile.name} onChange={(event) => onChange({ name: event.target.value })} placeholder={`${reviewSourceLabel(profile.source as ReviewSource)}配置名称`} /></label>
-			{!isWechat && <label><span>每日同步时间</span><select value={profile.sync_hour} onChange={(event) => onChange({ sync_hour: Number(event.target.value) })}>{Array.from({ length: 24 }, (_, hour) => <option value={hour} key={hour}>{String(hour).padStart(2, '0')}:00</option>)}</select></label>}
-		</div>
-		{!isWechat && <label><span>平台地址</span><input value={profile.base_url} onChange={(event) => onChange({ base_url: event.target.value })} placeholder={profile.source === 'xueqiu' ? 'https://xueqiu.com' : 'https://www.tgb.cn'} /></label>}
-		{usesBrowserLogin ? <div className={`profile-browser-auth ${browserAuthStatus?.configured ? 'ready' : ''}`}><Globe2 size={18} /><span><strong>{browserAuthStatus?.configured ? `${sourceLabel}浏览器已登录` : `使用内置浏览器登录${sourceLabel}`}</strong><small>{browserAuthStatus?.message || '打开后由你亲自完成登录或安全验证，然后点击“我已完成登录”保存登录态。'}</small>{browserAuthStatus?.updated_at && <em>最近保存 {new Date(browserAuthStatus.updated_at).toLocaleString('zh-CN', { hour12: false })}</em>}</span><button type="button" onClick={onOpenBrowserLogin} disabled={openingBrowser}>{openingBrowser ? <LoaderCircle className="spin" size={14} /> : <LogIn size={14} />}{openingBrowser ? '等待确认登录' : browserAuthStatus?.configured ? '重新登录' : '打开登录窗口'}</button></div> : isWechat ? <div className="profile-builtin-service"><Server size={16} /><span><strong>内置文章解析 API</strong><small>无需填写服务地址或 Token；扫码登录仅用于解析已知文章链接，不会读取公众号历史文章列表。</small></span></div> : null}
-		{!isWechat && <label className="profile-ai-toggle"><span>抓取后自动 AI 提炼</span><button type="button" className={profile.auto_analyze ? 'active' : ''} onClick={() => onChange({ auto_analyze: !profile.auto_analyze })}>{profile.auto_analyze ? '已开启' : '已关闭'}</button></label>}
-	</article>;
-}
-
-function toProfileDrafts(profiles: ReviewAutomationProfile[]): ReviewProfileDraft[] {
-	const drafts = profiles.map((profile) => ({ ...profile, base_url: profile.source === 'wechat' ? '' : profile.base_url, credential_value: '', clear_credential: profile.source === 'wechat' }));
-	if (!drafts.some((profile) => profile.source === 'wechat')) {
-		drafts.unshift({ id: 'wechat-default', source: 'wechat', name: '微信公众号默认配置', base_url: '', credential: { configured: false }, credential_value: '', clear_credential: true, sync_hour: 7, auto_analyze: true, enabled: true });
-	}
-	return drafts;
+						</SettingsSection>}
+		</>}
+		</div></SettingsPageContext.Provider>)}
+		<div className="settings-page-footer" ref={setFooter}/>
+	</section>;
 }
 
 function normalizeLLMProfiles(settings: AppSettings): LLMProfile[] {
@@ -666,13 +501,6 @@ function normalizeLLMProfiles(settings: AppSettings): LLMProfile[] {
 		return { ...profile, provider: definition.id, base_url: definition.baseURL, api_mode: definition.apiMode };
 	});
 }
-
-function newProfileDraft(source: ReviewSource): ReviewProfileDraft {
-	const suffix = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
-	return { id: `${source}-${suffix}`, source, name: `${reviewSourceLabel(source)}配置`, base_url: source === 'wechat' ? '' : source === 'xueqiu' ? 'https://xueqiu.com' : 'https://www.tgb.cn', credential: { configured: false }, credential_value: '', clear_credential: false, sync_hour: 7, auto_analyze: true, enabled: true };
-}
-
-function reviewSourceLabel(source: ReviewSource) { return source === 'wechat' ? '微信公众号' : source === 'xueqiu' ? '雪球' : '淘股吧'; }
 
 function modelOptionLabel(option: LLMModelOption) {
 	const detail = option.display_name || option.owned_by;
@@ -737,6 +565,8 @@ function SecretField({ label, secretKey, status, value, clearing, onChange, onCl
 			}
 		}
 	};
+	const page = useContext(SettingsPageContext);
+	useEffect(() => { if (page && !page.active) { cancelReveal(); setSavedValue(''); setRevealed(false); setRevealError(''); } }, [page?.active]);
 	const hasSavedValue = revealable && status?.configured && !clearing;
 	return (
 		<label className={`secret-field ${clearing ? 'clearing' : ''}`}>

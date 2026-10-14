@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 	"unicode/utf8"
 
@@ -22,7 +23,11 @@ type Client struct {
 	moneyFlowBaseURL       string
 	sectorMoneyFlowBaseURL string
 	financialBaseURL       string
+	reportBaseURL          string
 	httpClient             *http.Client
+	amountMu               sync.Mutex
+	amountCache            map[string]amountCacheEntry
+	breadthBaseURL         string
 }
 
 type Option func(*Client)
@@ -62,10 +67,12 @@ func WithSectorMoneyFlowBaseURL(baseURL string) Option {
 func NewClient(opts ...Option) *Client {
 	c := &Client{
 		baseURL:                "https://hq.sinajs.cn",
+		breadthBaseURL:         "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/Market_Center.",
 		kLineBaseURL:           "https://quotes.sina.cn/cn/api/jsonp_v2.php/callback/CN_MarketDataService.getKLineData",
 		moneyFlowBaseURL:       "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_ssggzj",
 		sectorMoneyFlowBaseURL: "https://vip.stock.finance.sina.com.cn/quotes_service/api/json_v2.php/MoneyFlow.ssl_bkzj_bk",
 		financialBaseURL:       "https://quotes.sina.cn/cn/api/openapi.php/CompanyFinanceService.getFinanceReport2022",
+		reportBaseURL:          "https://stock.finance.sina.com.cn",
 		httpClient:             &http.Client{Timeout: 10 * time.Second},
 	}
 	for _, opt := range opts {

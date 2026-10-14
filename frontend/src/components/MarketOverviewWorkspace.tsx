@@ -67,6 +67,10 @@ type Props = {
 	config: BackendConfig | null;
 	refreshKey: number;
 	onAskAI: (prompt: string) => void;
+ views?: MarketOverviewView[];
+ view?: MarketOverviewView;
+ onViewChange?: (view:MarketOverviewView)=>void;
+ initialQuery?:string;
 };
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
@@ -85,8 +89,8 @@ const moduleIcons = {
 	'industry-research': SearchCheck,
 } satisfies Record<MarketOverviewView, typeof Newspaper>;
 
-export function MarketOverviewWorkspace({ config, refreshKey, onAskAI }: Props) {
-	const [activeView, setActiveView] = useState<MarketOverviewView>(() => resolveMarketOverviewView(window.location.hash));
+export function MarketOverviewWorkspace({ config, refreshKey, onAskAI, views, view, onViewChange, initialQuery }: Props) {
+	const [activeView, setActiveView] = useState<MarketOverviewView>(() => view || resolveMarketOverviewView(window.location.hash));
 	const [news, setNews] = useState<NewsItem[]>([]);
 	const [themes, setThemes] = useState<ThemeOverview[]>([]);
 	const [themeMeta, setThemeMeta] = useState<SourceMeta | null>(null);
@@ -207,7 +211,7 @@ export function MarketOverviewWorkspace({ config, refreshKey, onAskAI }: Props) 
 				setModuleMeta(payload.meta);
 			} else {
 				const params = new URLSearchParams({ limit: '80' });
-				if (submittedQuery) params.set('q', submittedQuery);
+				if (submittedQuery) {if(/^\d{6}(\.(SH|SZ|BJ))?$/i.test(submittedQuery))params.set('symbol',submittedQuery);else params.set('q', submittedQuery);}
 				let endpoint = '/api/v1/research/announcements';
 				if (activeView === 'announcements') params.set('category', announcementCategory);
 				if (activeView === 'institution-reports') endpoint = '/api/v1/research/institution-reports';
@@ -267,6 +271,8 @@ export function MarketOverviewWorkspace({ config, refreshKey, onAskAI }: Props) 
 		return () => window.removeEventListener('hashchange', onHashChange);
 	}, []);
 
+	useEffect(()=>{if(view)setActiveView(view)},[view]);
+ useEffect(()=>{if(initialQuery){setSearchDraft(initialQuery);setSubmittedQuery(initialQuery)}},[initialQuery]);
 	const selectView = (view: MarketOverviewView) => {
 		if (view !== activeView && isResearchView(view)) {
 			setSearchDraft('');
@@ -275,7 +281,7 @@ export function MarketOverviewWorkspace({ config, refreshKey, onAskAI }: Props) 
 		}
 		setActiveView(view);
 		setModuleError('');
-		window.history.replaceState(null, '', `#market/${view}`);
+		if(onViewChange)onViewChange(view);else window.history.replaceState(null, '', `#market/${view}`);
 	};
 
 	const activeEvidence = useMemo(() => ({
@@ -343,14 +349,15 @@ export function MarketOverviewWorkspace({ config, refreshKey, onAskAI }: Props) 
 		else setSubmittedQuery(next);
 	};
 
-	return <section className="market-overview-workspace">
-		<aside className="market-overview-nav" aria-label="行情总览功能">
+	return <section className={`market-overview-workspace ${views?'embedded':''}`}>
+ {views&&views.length>1&&<nav className="workspace-subfilters" aria-label="数据范围">{views.map(v=><button type="button" key={v} aria-pressed={activeView===v} onClick={()=>selectView(v)}>{findMarketOverviewModule(v).name}</button>)}</nav>}
+		{!views&&<aside className="market-overview-nav" aria-label="行情总览功能">
 			<header><BarChart3 size={18} /><div><span>MARKET OVERVIEW</span><strong>行情总览</strong></div></header>
 			{marketOverviewGroups.map((group) => <section key={group.id}><h2>{group.name}</h2><div>{group.modules.map((module) => {
 				const Icon = moduleIcons[module.id];
 				return <button type="button" className={activeView === module.id ? 'active' : ''} onClick={() => selectView(module.id)} key={module.id}><Icon size={16} /><span><strong>{module.name}</strong><small>{module.description}</small></span></button>;
 			})}</div></section>)}
-		</aside>
+		</aside>}
 
 		<div className="market-overview-main">
 			<header className="market-overview-hero">
@@ -392,7 +399,7 @@ function PulseView({ news, themes, themeMeta, sources, state, error, lastUpdated
 		<section className="market-pulse-metrics">
 			<Metric icon={<Newspaper size={17} />} label="快讯样本" value={state === 'loading' ? '--' : String(news.length)} detail="财联社最新快讯" />
 			<Metric icon={<TrendingUp size={17} />} label="题材快照" value={state === 'loading' ? '--' : String(themes.length)} detail={themeMeta?.trade_date || '等待交易日'} />
-			<Metric icon={<Database size={17} />} label="数据源" value={sources.length ? `${healthySources}/${sources.length}` : '--'} detail="当前健康状态" />
+			<Metric icon={<Database size={17} />} label="数据源" value={sources.length ? `${healthySources}/${sources.length}` : '--'} detail="检测样本可用 / 来源总数" />
 			<Metric icon={<Clock3 size={17} />} label="最近刷新" value={lastUpdated ? formatTime(lastUpdated) : '--'} detail={themeMeta?.stale ? '题材数据已标记陈旧' : '本机聚合时间'} />
 		</section>
 		{error && <div className="market-partial-warning"><AlertTriangle size={15} /><span>{error}。已展示其余可用数据。</span></div>}

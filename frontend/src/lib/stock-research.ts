@@ -9,6 +9,7 @@ export type ResearchTradingLogic = { business?: ResearchClaim | null; mainlines:
 export type ResearchCondition = { id: string; text: string; metric: string; operator: string; anchor_id?: string; threshold?: number; window: string; source_ids: string[]; status: string };
 export type ResearchScenario = { key: string; name: string; description: string; condition_ids: string[]; response: string };
 export type ResearchReport = {
+ skill_refs?:{name:string;hash:string;loaded_at:string}[];tool_calls?:{name:string;status:string;duration_ms:number;evidence_id?:string}[];
 	trading_logic?: ResearchTradingLogic | null;
 	headline: string; thesis: ResearchClaim; support: ResearchClaim[]; counter: ResearchClaim[]; alternatives: ResearchClaim[];
 	main_conflict: string; evidence_level: string; evidence_reasons?: string[]; limitations: string[]; conditions: ResearchCondition[]; invalidation_ids: string[];

@@ -181,10 +181,13 @@ func (s *Service) Get(ctx context.Context, id string) (Job, error) {
 }
 
 func (s *Service) List(ctx context.Context, limit int, planID ...string) ([]Job, error) {
+	return s.ListPage(ctx, limit, 0, planID...)
+}
+func (s *Service) ListPage(ctx context.Context, limit, offset int, planID ...string) ([]Job, error) {
 	if s == nil || s.store == nil {
 		return nil, errors.New("持仓巡检服务不可用")
 	}
-	jobs, err := s.store.List(ctx, limit, planID...)
+	jobs, err := s.store.ListPage(ctx, limit, offset, planID...)
 	for i := range jobs {
 		jobs[i] = decorateJob(jobs[i])
 	}

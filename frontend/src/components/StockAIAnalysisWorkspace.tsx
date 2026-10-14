@@ -1,3 +1,9 @@
+import { ResearchNotes } from './ResearchNotes';
+import { ResearchContextButton } from './ResearchContextButton';
+import { StockOverview } from './StockOverview';
+import { MarketOverviewWorkspace } from './MarketOverviewWorkspace';
+import { ResearchEvidence } from './StockResearchReport';
+import type { MarketOverviewView } from '../lib/market-overview';
 import { ChartSvg } from './ChartSvg';
 import { ReasoningControl } from './ReasoningControl';
 import {
@@ -78,6 +84,7 @@ import { StockResearchTradingLogic } from './StockResearchTradingLogic';
 export type StockAIWorkspaceMode = 'analysis' | 'expectation' | 'risk';
 
 type Props = {
+ contextDate?:string;activeTab?:string; initialSymbol?:string;initialRecordID?:string;onTabChange?:(tab:string)=>void;onSymbolChange?:(symbol:string)=>void;onRecordChange?:(symbol:string,id:string)=>void;
 	config: BackendConfig | null;
 	refreshKey: number;
 	mode: StockAIWorkspaceMode;
@@ -113,8 +120,11 @@ function writeStoredValue(key: string, value: string) { try { window.localStorag
 
 type DirectoryState = 'idle' | 'loading' | 'cached' | 'ready' | 'error';
 type HotRankState = 'idle' | 'loading' | 'ready' | 'error';
-export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChange, initialAnalysis, onInitialAnalysisConsumed, onAskAI, onOpenSettings }: Props) {
+export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChange, initialAnalysis, onInitialAnalysisConsumed, onAskAI, onOpenSettings, activeTab,initialSymbol,contextDate,initialRecordID,onTabChange,onSymbolChange,onRecordChange }: Props) {
 	const research = useStockResearch(config);
+ const [sourceView,setSourceView]=useState<MarketOverviewView>("announcements");
+ const controlledTab=activeTab||"analysis";
+ useEffect(()=>{if(activeTab)onModeChange(activeTab==='plan'?'expectation':'analysis')},[activeTab]);
 	const [purpose, setPurpose] = useState<ResearchRequest['purpose']>('observe');
 	const [horizon, setHorizon] = useState<ResearchRequest['horizon']>('swing');
 	const [cost, setCost] = useState('');
@@ -135,7 +145,7 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 	const [hotRanks, setHotRanks] = useState<HotStockRankData | null>(null);
 	const [hotRankState, setHotRankState] = useState<HotRankState>('idle');
 	const [hotRankError, setHotRankError] = useState('');
-	const [hotStockSidebarCollapsed, setHotStockSidebarCollapsed] = useState(() => readStoredValue(hotStockSidebarStorageKey) === '1');
+	const [hotStockSidebarCollapsed, setHotStockSidebarCollapsed] = useState(() => activeTab ? readStoredValue(hotStockSidebarStorageKey+'.five-workspaces')!=='0' : readStoredValue(hotStockSidebarStorageKey)==='1');
 	const [llmProfiles, setLLMProfiles] = useState<LLMProfile[]>([]);
 	const [activeLLMProfileID, setActiveLLMProfileID] = useState('');
 	const [aiChoiceBusy, setAIChoiceBusy] = useState(false);
@@ -200,9 +210,10 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 		onInitialAnalysisConsumed?.();
 	}, [initialAnalysis, onInitialAnalysisConsumed, saveAnalysis, research.open, research.clear]);
 
+ useEffect(()=>{if(!config||(!initialSymbol&&!initialRecordID))return;let alive=true;setAnalysis(null);setState('idle');setError('');research.clear();if(initialSymbol)setQuery(initialSymbol);if(initialRecordID){research.open(initialRecordID);return}void requestJSON<{data:import('../lib/stock-research').ResearchJobSummary[]}>(config,'/api/v1/stocks/research').then(p=>{if(!alive)return;const match=p.data.find(j=>j.request.symbol===initialSymbol);if(match)research.open(match.id)}).catch(()=>{});return()=>{alive=false}},[config,initialSymbol,initialRecordID,research.clear,research.open]);
 	useEffect(() => {
 		const job = research.job;
-		if (!job) return;
+		if (!job || (initialSymbol && job.request.symbol!==initialSymbol && !initialRecordID)) return;
 		if (job.analysis) setAnalysis(job.analysis);
 		setState(isResearchRunning(job) ? job.analysis ? 'refining' : 'loading' : job.analysis ? 'ready' : 'error');
 		if (job.status === 'failed' && !job.analysis) setError(job.error || job.message);
@@ -211,7 +222,7 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 		if (research.error && !research.job && !research.starting) { setState('error'); setError(research.error); }
 	}, [research.error, research.job, research.starting]);
 	useEffect(() => {
-		if (!research.job) return;
+		if (!research.job || (initialSymbol && research.job.request.symbol!==initialSymbol && !initialRecordID)) return;
 		setQuery(research.job.request.symbol); setPurpose(research.job.request.purpose); setHorizon(research.job.request.horizon); setCost(research.job.request.cost_price?.toString() || '');
 		if (research.job.request.analysis_level) setResearchLevel(research.job.request.analysis_level);
 	}, [research.job?.id]);
@@ -260,9 +271,10 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 			setState('error');
 			return;
 		}
-		setPendingAnalysisSymbol(symbol);
+		if(onSymbolChange && symbol!==initialSymbol)onSymbolChange(symbol);
+ setPendingAnalysisSymbol(symbol);
 		setLevelDialogOpen(true);
-	}, [analysis?.research_report, config, directory]);
+	}, [analysis?.research_report, config, directory, initialSymbol, onSymbolChange]);
 
 	useEffect(() => () => {
 		analysisAbortController.current?.abort();
@@ -305,7 +317,7 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 	const toggleHotStockSidebar = () => {
 		setHotStockSidebarCollapsed((current) => {
 			const next = !current;
-			writeStoredValue(hotStockSidebarStorageKey, next ? '1' : '0');
+			writeStoredValue(activeTab?hotStockSidebarStorageKey+'.five-workspaces':hotStockSidebarStorageKey, next ? '1' : '0');
 			return next;
 		});
 	};
@@ -314,17 +326,13 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 		void loadHotRanks();
 	}, [loadHotRanks]);
 
-	useEffect(() => {
-		if (refreshKey <= 0 || lastRefreshKey.current === refreshKey) return;
-		lastRefreshKey.current = refreshKey;
-		const currentAnalysis = analysisRef.current;
-		if (!currentAnalysis?.symbol) return;
-		void runAnalysis(currentAnalysis.symbol, currentAnalysis.research_report?.analysis_level || currentAnalysis.research_report?.request.analysis_level || researchLevel);
-	}, [refreshKey, runAnalysis]);
+ useEffect(()=>{if(refreshKey>0)void research.refreshHistory()},[refreshKey,research.refreshHistory]);
 
 	const submit = (event: FormEvent) => {
 		event.preventDefault();
-		requestAnalysis(query);
+		const symbol=resolveStockDirectorySymbol(query,directory);
+        if(!symbol){setError('请先选择有效股票代码');return;}
+        onSymbolChange?.(symbol);
 	};
 
 	const confirmResearchLevel = (setup: ResearchSetupOptions) => {
@@ -398,21 +406,21 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 	};
 
 	return (
-		<section className="stock-ai-workspace">
-			<AnalysisSearch query={query} mode={mode} directory={directory} directoryState={directoryState} onQuery={setQuery} onSubmit={submit} loading={state === 'loading' || state === 'refining'} llmProfiles={llmProfiles} activeLLMProfileID={activeLLMProfileID} config={config} refreshKey={String(refreshKey)} choiceBusy={aiChoiceBusy} onModelChange={(id) => void switchResearchModel(id)} />
-			<nav className="mode-nav stock-ai-mode-nav" aria-label="工作台模式">
-				<button type="button" className={mode === 'analysis' ? 'active' : ''} aria-pressed={mode === 'analysis'} onClick={() => onModeChange('analysis')}><BrainCircuit size={16} aria-hidden="true" />个股分析</button>
+		<section className={`stock-ai-workspace ${activeTab ? "stock-workspace-compact" : ""}`}>
+			<AnalysisSearch query={query} mode={mode} directory={directory} directoryState={directoryState} onQuery={setQuery} onSubmit={submit} onAnalyze={()=>requestAnalysis(query)} loading={state === 'loading' || state === 'refining'} llmProfiles={llmProfiles} activeLLMProfileID={activeLLMProfileID} config={config} refreshKey={String(refreshKey)} choiceBusy={aiChoiceBusy} onModelChange={(id) => void switchResearchModel(id)} />
+			{(!activeTab||activeTab==='plan')&&<nav className="mode-nav stock-ai-mode-nav" aria-label="工作台模式">
+				{!activeTab&&<button type="button" className={mode === 'analysis' ? 'active' : ''} aria-pressed={mode === 'analysis'} onClick={() => onModeChange('analysis')}><BrainCircuit size={16} aria-hidden="true" />个股分析</button>}
 				<button type="button" className={mode === 'expectation' ? 'active' : ''} aria-pressed={mode === 'expectation'} onClick={() => onModeChange('expectation')}><Target size={16} aria-hidden="true" />隔日预期</button>
 				<button type="button" className={mode === 'risk' ? 'active' : ''} aria-pressed={mode === 'risk'} onClick={() => onModeChange('risk')}><ShieldCheck size={16} aria-hidden="true" />风控执行</button>
-			</nav>
+			</nav>}
 			{levelDialogOpen && <StockResearchSetupDialog symbol={pendingAnalysisSymbol} initialOptions={{ purpose, horizon, cost, level: 'deep' }} onCancel={() => setLevelDialogOpen(false)} onConfirm={confirmResearchLevel} />}
 			<div className={`stock-ai-shell ${hotStockSidebarCollapsed ? 'is-hot-collapsed' : ''}`.trim()}>
-					<HotStockSidebar data={hotRanks} state={hotRankState} error={hotRankError} activeSymbol={analysis?.symbol} collapsed={hotStockSidebarCollapsed} onToggle={toggleHotStockSidebar} onRefresh={() => void loadHotRanks(true)} onSelect={(symbol) => requestAnalysis(symbol)} />
+					<HotStockSidebar data={hotRanks} state={hotRankState} error={hotRankError} activeSymbol={analysis?.symbol} collapsed={hotStockSidebarCollapsed} onToggle={toggleHotStockSidebar} onRefresh={() => void loadHotRanks(true)} onSelect={(symbol) => { if(onSymbolChange)onSymbolChange(symbol);else requestAnalysis(symbol); }} />
 				<div className="stock-ai-main">
-					<StockResearchHistory items={research.history} activeID={research.selectedID} onOpen={(id) => { setAnalysis(null); setState('loading'); research.open(id); }} onRemove={(id) => { void research.remove(id).then((removed) => { if (removed && (analysis?.analysis_id === id || research.selectedID === id)) { setAnalysis(null); setState('idle'); setError(''); } }); }} />
+					{(!activeTab||activeTab==='sources')&&<StockResearchHistory items={research.history} activeID={research.selectedID} onOpen={(id) => { const item=research.history.find(j=>j.id===id);if(onRecordChange&&item){onRecordChange(item.request.symbol,id);return}setAnalysis(null);setState('loading');research.open(id); }} onRemove={(id) => { void research.remove(id).then((removed) => { if (removed && (analysis?.analysis_id === id || research.selectedID === id)) { setAnalysis(null); setState('idle'); setError(''); } }); }} />}
 					<StockResearchProgress job={research.job} onCancel={() => void research.cancel()} onResume={() => void research.resume()} resuming={research.starting} />
 					{research.error && <div className="stock-ai-error" role="alert"><CircleAlert size={18} /><span>{research.error}</span></div>}
-					{history.length > 0 && <AnalysisHistory items={history} activeSymbol={analysis?.symbol} onSelect={selectHistory} onRemove={removeHistory} />}
+					{(!activeTab||activeTab==='sources')&&history.length > 0 && <AnalysisHistory items={history} activeSymbol={analysis?.symbol} onSelect={selectHistory} onRemove={removeHistory} />}
 
 					{state === 'loading' && !research.job && (
 						<div className="stock-ai-loading" role="status" aria-live="polite">
@@ -443,18 +451,22 @@ export function StockAIAnalysisWorkspace({ config, refreshKey, mode, onModeChang
 						</div>
 					)}
 
-					{state !== 'loading' && !analysis && state !== 'error' && <StockAIEmpty onSelect={(symbol) => requestAnalysis(symbol)} />}
-					{state !== 'loading' && analysis && (
+					{analysis?.analysis_id&&<><ResearchContextButton config={config} kind="stock" recordID={analysis.analysis_id}/>{analysis.research_report&&<p className="workspace-context">报告生成 {new Date(analysis.research_report.generated_at).toLocaleString('zh-CN')} · 证据截至 {new Date(analysis.research_report.cutoff_at).toLocaleString('zh-CN')} · 下方报告行情保留原时点</p>}</>}
+ {controlledTab==='plan'&&<ResearchNotes config={config} entity={(initialSymbol||analysis?.symbol)?'stock:'+(initialSymbol||analysis?.symbol):''} title={`个股预案 · ${initialSymbol||analysis?.name||''}`} sourceID={analysis?.analysis_id} sourceText={analysis?.research_report?JSON.stringify(analysis.research_report):''}/>}
+ {controlledTab==='overview'&&<StockOverview contextDate={contextDate} config={config} symbol={initialSymbol||analysis?.symbol||resolveStockDirectorySymbol(query,directory)||''} analysis={analysis} onTab={t=>onTabChange?.(t)}/>}
+ {controlledTab==='sources'&&<><MarketOverviewWorkspace config={config} refreshKey={refreshKey} views={['announcements','institution-reports']} view={sourceView} onViewChange={setSourceView} initialQuery={initialSymbol||analysis?.symbol} onAskAI={()=>analysis&&onAskAI(analysis)}/>{analysis?.research_report&&<ResearchEvidence report={analysis.research_report} selectedID=""/>}</>}
+ {controlledTab!=='overview'&&controlledTab!=='sources'&&state !== 'loading' && !analysis && state !== 'error' && <StockAIEmpty onSelect={(symbol) => requestAnalysis(symbol)} />}
+					{controlledTab!=='overview'&&controlledTab!=='sources'&&state !== 'loading' && analysis && (
 						<div className="stock-ai-result">
 							<div className="stock-ai-export-sheet" ref={exportRef}>
 								<AnalysisExportHeader analysis={analysis} mode={mode} />
 								<AnalysisVerdict analysis={analysis} copied={copied} exporting={exporting} onRefresh={() => requestAnalysis(analysis.symbol)} onExport={() => void exportLongImage()} onCopy={() => void copyPlan()} onAskAI={() => onAskAI(analysis)} onOpenSettings={onOpenSettings} />
 									{analysis.research_report ? <>
-										{mode === 'analysis' && <details className="stock-research-quantitative" open><summary>量化基线与行情数据 · {analysis.scorecard.overall} 分</summary><FullAnalysisView analysis={analysis} /></details>}
+										{mode === 'analysis' && <details className="stock-research-quantitative"><summary>量化基线与行情数据 · {analysis.scorecard.overall} 分</summary><FullAnalysisView analysis={analysis} /></details>}
 										{mode === 'analysis' && <StockResearchTradingLogic key={analysis.analysis_id || analysis.research_report.generated_at} report={analysis.research_report} />}
 										<StockResearchReportView analysis={analysis} view={mode === 'analysis' ? 'research' : mode} verification={research.job?.id === analysis.analysis_id ? research.job?.verification : undefined} verifying={research.verifying} onVerify={research.job?.id === analysis.analysis_id ? () => void research.verify() : undefined} />
 										{mode === 'risk' && analysis.research_report.decision.price_plan && <PositionCalculator analysis={analysis} />}
-									</> : analysis.analysis_id ? <section className="stock-research-band"><h3>当前仅有量化快照</h3><p>{analysis.ai?.message || 'AI研究尚未完成'}</p><details className="stock-research-quantitative" open><summary>查看历史量价与资料</summary><FullAnalysisView analysis={analysis} /></details></section> : <>
+									</> : analysis.analysis_id ? <section className="stock-research-band"><h3>当前仅有量化快照</h3><p>{analysis.ai?.message || 'AI研究尚未完成'}</p><details className="stock-research-quantitative"><summary>查看历史量价与资料</summary><FullAnalysisView analysis={analysis} /></details></section> : <>
 										{mode === 'analysis' && <FullAnalysisView analysis={analysis} />}
 										{mode === 'expectation' && <ExpectationView analysis={analysis} />}
 										{mode === 'risk' && <RiskExecutionView analysis={analysis} />}
@@ -559,13 +571,14 @@ function AnalysisExportFooter({ analysis }: { analysis: StockAIAnalysis }) {
 	</footer>;
 }
 
-function AnalysisSearch({ query, mode, directory, directoryState, onQuery, onSubmit, loading, llmProfiles, activeLLMProfileID, config, refreshKey, choiceBusy, onModelChange }: {
+function AnalysisSearch({ query, mode, directory, directoryState, onQuery, onSubmit, onAnalyze, loading, llmProfiles, activeLLMProfileID, config, refreshKey, choiceBusy, onModelChange }: {
 	query: string;
 	mode: StockAIWorkspaceMode;
 	directory: StockDirectoryEntry[];
 	directoryState: DirectoryState;
 	onQuery: (value: string) => void;
 	onSubmit: (event: FormEvent) => void;
+ onAnalyze:()=>void;
 	loading: boolean;
 	llmProfiles: LLMProfile[];
 	activeLLMProfileID: string;
@@ -614,7 +627,7 @@ function AnalysisSearch({ query, mode, directory, directoryState, onQuery, onSub
 				<label><span>模型</span><select value={activeLLMProfileID} onChange={(event) => onModelChange(event.target.value)} disabled={choiceBusy || loading || !llmProfiles.length} aria-label="完整分析模型"><option value="">当前模型</option>{llmProfiles.map((profile) => <option value={profile.id} key={profile.id}>{profile.name} · {profile.model}</option>)}</select></label>
 				<ReasoningControl config={config} refreshKey={JSON.stringify([activeLLMProfileID, llmProfiles.find((profile) => profile.id === activeLLMProfileID), refreshKey])} disabled={choiceBusy || loading} label="完整分析思考等级" />
 			</div>
-			<div>
+			<div className="stock-ai-search-description">
 				<span><BrainCircuit size={15} />STOCK DECISION SYSTEM</span>
 				<h2>个股 AI 分析</h2>
 				<p>{descriptions[mode]}</p>
@@ -634,7 +647,7 @@ function AnalysisSearch({ query, mode, directory, directoryState, onQuery, onSub
 						</div>
 					)}
 				</div>
-				<button type="submit" disabled={loading || !query.trim()}>{loading ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}完整分析</button>
+				<button type="submit" disabled={!query.trim()}><Search size={16}/>查看</button><button type="button" onClick={onAnalyze} disabled={loading || !query.trim()}>{loading ? <LoaderCircle className="spin" size={16} /> : <Sparkles size={16} />}完整分析</button>
 			</form>
 		</header>
 	);

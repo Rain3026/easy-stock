@@ -67,24 +67,6 @@ func (s *Server) notifyDailySummary(job review.DailySummaryJob, summary *review.
 	}
 	s.notifications.Publish(notification.Event{Kind: "daily_review", Failed: job.Status != "succeeded", Channels: append([]string{}, job.NotificationChannels...), Message: notification.Message{Title: title, Text: review.DailySummaryMarkdown(job, summary)}})
 }
-func (s *Server) RunDailySummaryScheduler(ctx context.Context) {
-	if s.reviewScheduler == nil {
-		return
-	}
-	tick := func() {
-		if err := s.reviewScheduler.Tick(ctx, time.Now()); err != nil && s.logger != nil {
-			s.logger.Printf("level=warn event=daily_review_schedule_failed")
-		}
-	}
-	tick()
-	timer := time.NewTicker(30 * time.Second)
-	defer timer.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return
-		case <-timer.C:
-			tick()
-		}
-	}
-}
+
+// The legacy scheduler is retired; historical records remain readable.
+func (s *Server) RunDailySummaryScheduler(ctx context.Context) {}

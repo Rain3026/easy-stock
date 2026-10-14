@@ -59,6 +59,13 @@ func WithResearchModelIdentity(ctx context.Context, identity string) context.Con
 	return ctx
 }
 func researchHash(value any) string {
+	if snapshot, ok := value.(*ResearchSnapshot); ok && snapshot != nil {
+		copy := *snapshot
+		copy.ToolCalls = nil
+		copy.SkillRefs = nil
+		copy.EvidenceID = ""
+		value = &copy
+	}
 	encoded, _ := json.Marshal(value)
 	hash := sha256.Sum256(encoded)
 	return hex.EncodeToString(hash[:])

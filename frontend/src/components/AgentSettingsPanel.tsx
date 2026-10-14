@@ -3,8 +3,10 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { BackendConfig, AgentSettings, AgentInstalledSkill, AgentMCPServerSetting, AgentSkillMarketEntry, AgentSkillMarketSource, AgentSkillSetting, SecretSettingStatus } from '../lib/backend';
 import { requestJSON } from '../lib/backend';
 import { SettingsSection } from './SettingsSection';
+import { SettingsFooter, useSettingsDraft } from './SettingsPageLayout';
+import { agentSettingsUpdateForTab } from '../lib/settings-workspace';
 
-type Props = { config: BackendConfig | null; open: boolean };
+type Props = { config: BackendConfig | null; open: boolean; section: 'skills' | 'mcp' };
 type SecretEntryDraft = { id: string; key: string; value: string; configured: boolean; masked?: string; remove: boolean };
 type MCPDraft = Omit<AgentMCPServerSetting, 'env' | 'headers' | 'args'> & { id: string; originalName: string; argsText: string; env: SecretEntryDraft[]; headers: SecretEntryDraft[] };
 
@@ -12,7 +14,7 @@ type MCPDraft = Omit<AgentMCPServerSetting, 'env' | 'headers' | 'args'> & { id: 
 let draftSequence = 0;
 const nextID = (prefix: string) => `${prefix}-${Date.now()}-${++draftSequence}`;
 
-export function AgentSettingsPanel({ config, open }: Props) {
+export function AgentSettingsPanel({ config, open, section }: Props) {
 	const [skills, setSkills] = useState<AgentSkillSetting[]>([]);
 	const [servers, setServers] = useState<MCPDraft[]>([]);
 	const [search, setSearch] = useState('');
@@ -24,6 +26,13 @@ export function AgentSettingsPanel({ config, open }: Props) {
 	const [downloadProgress, setDownloadProgress] = useState<{ downloaded: number; total: number; bytesPerSecond: number; url: string } | null>(null);
 	const directoryInput = useRef<HTMLInputElement>(null);
 	const zipInput = useRef<HTMLInputElement>(null);
+	const [loaded, setLoaded] = useState(false);
+	const draft = useSettingsDraft({ skills, servers }, value => { setSkills(value.skills); setServers(value.servers); setMessage(''); });
+	const loadValues = (data: AgentSettings) => {
+		const next = { skills: data.skills || [], servers: (data.mcp_servers || []).map(toMCPDraft) };
+		setSkills(next.skills); setServers(next.servers); draft.accept(next); setLoaded(true);
+	};
+
 
 	useEffect(() => {
 		if (!open || !config) return;
@@ -33,8 +42,7 @@ export function AgentSettingsPanel({ config, open }: Props) {
 		requestJSON<{ data: AgentSettings }>(config, '/api/v1/settings/agent')
 			.then(({ data }) => {
 				if (cancelled) return;
-				setSkills(data.skills || []);
-				setServers((data.mcp_servers || []).map(toMCPDraft));
+				loadValues(data);
 				setState('idle');
 			})
 			.catch((error) => {
@@ -42,14 +50,14 @@ export function AgentSettingsPanel({ config, open }: Props) {
 				setState('error');
 				setMessage(error instanceof Error ? error.message : '读取 Skill/MCP 设置失败');
 			});
-		requestJSON<{ data: AgentSkillMarketEntry[] }>(config, '/api/v1/settings/agent/skills/market')
+		if (section === 'skills') requestJSON<{ data: AgentSkillMarketEntry[] }>(config, '/api/v1/settings/agent/skills/market')
 			.then(({ data }) => { if (!cancelled) setMarketSkills(data || []); })
 			.catch(() => { if (!cancelled) setMarketSkills([]); });
-		requestJSON<{ data: AgentSkillMarketSource[] }>(config, '/api/v1/settings/agent/skills/market/sources')
+		if (section === 'skills') requestJSON<{ data: AgentSkillMarketSource[] }>(config, '/api/v1/settings/agent/skills/market/sources')
 			.then(({ data }) => { if (!cancelled) setMarketSources(data || []); })
 			.catch(() => { if (!cancelled) setMarketSources([]); });
 		return () => { cancelled = true; };
-	}, [config, open]);
+	}, [config, open, section]);
 
 	const filteredSkills = useMemo(() => {
 		const query = search.trim().toLowerCase();
@@ -84,7 +92,7 @@ export function AgentSettingsPanel({ config, open }: Props) {
 			const payload = await requestJSON<{ data: AgentInstalledSkill[] }>(config, '/api/v1/settings/agent/skills/import', { method: 'POST', body: form });
 			const imported = payload.data || [];
 			const refreshed = await requestJSON<{ data: AgentSettings }>(config, '/api/v1/settings/agent');
-			setSkills(refreshed.data.skills || []);
+			loadValues(refreshed.data);
 			setState('saved');
 			setMessage(`已导入 ${imported.length} 个 Skill，请在列表中确认启用状态。`);
 		} catch (error) {
@@ -139,7 +147,7 @@ export function AgentSettingsPanel({ config, open }: Props) {
 				if (done) break;
 			}
 			const refreshed = await requestJSON<{ data: AgentSettings }>(config, '/api/v1/settings/agent');
-			setSkills(refreshed.data.skills || []);
+			loadValues(refreshed.data);
 			setGitURL('');
 			setState('saved');
 			setMessage(`已从 GitHub 安装 ${installed.length} 个 Skill。`);
@@ -161,7 +169,7 @@ export function AgentSettingsPanel({ config, open }: Props) {
 		try {
 			await requestJSON(config, '/api/v1/settings/agent/skills/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name }) });
 			const refreshed = await requestJSON<{ data: AgentSettings }>(config, '/api/v1/settings/agent');
-			setSkills(refreshed.data.skills || []);
+			loadValues(refreshed.data);
 			setState('saved');
 			setMessage(`已删除 Skill「${name}」。`);
 		} catch (error) {
@@ -178,15 +186,14 @@ export function AgentSettingsPanel({ config, open }: Props) {
 			const payload = await requestJSON<{ data: AgentSettings }>(config, '/api/v1/settings/agent', {
 				method: 'PUT',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({
+				body: JSON.stringify(agentSettingsUpdateForTab(section, {
 					skills: skills.map(({ name, enabled }) => ({ name, enabled })),
 					mcp_servers: servers.map(toMCPUpdate),
-				}),
+				})),
 			});
-			setSkills(payload.data.skills || []);
-			setServers((payload.data.mcp_servers || []).map(toMCPDraft));
+			loadValues(payload.data);
 			setState('saved');
-			setMessage('Skill 与 MCP 设置已同步到本机 Agent；MCP 会自动重新加载。');
+			setMessage(section === 'skills' ? 'SKILL 启用状态已保存。' : 'MCP 配置已保存，服务将自动重新加载。');
 		} catch (error) {
 			setState('error');
 			setMessage(error instanceof Error ? error.message : '保存 Skill/MCP 设置失败');
@@ -194,29 +201,32 @@ export function AgentSettingsPanel({ config, open }: Props) {
 	};
 
 	return (
-		<SettingsSection className="agent-agent-settings" title="Skill 与 MCP" description="控制 Agent 可加载的本机技能，并连接 stdio、Streamable HTTP 或 SSE MCP Server。" icon={<Puzzle size={18} />} onKeyDown={(event) => { if (event.key === 'Enter' && event.target instanceof HTMLInputElement) event.preventDefault(); }}>
+		<SettingsSection className="agent-agent-settings" title={section === 'skills' ? 'SKILL 技能' : 'MCP 服务'} description={section === 'skills' ? '管理本机技能、启用状态与技能来源。' : '连接本机命令、Streamable HTTP 或 SSE 工具服务。'} icon={section === 'skills' ? <Puzzle size={18} /> : <Network size={18}/>} onKeyDown={(event) => { if (event.key === 'Enter' && event.target instanceof HTMLInputElement) event.preventDefault(); }}>
 			{state === 'loading' ? <div className="agent-settings-loading"><LoaderCircle className="spin" size={18} />读取 Agent 能力配置</div> : <>
-				<div className="agent-settings-block">
+				{section === 'skills' && <div className="agent-settings-block">
 					<div className="agent-settings-heading"><div><strong>Skills</strong><span>{enabledSkillCount}/{skills.length} 个已启用</span></div><div className="agent-settings-heading-actions"><label><Search size={14} /><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索 Skill" /></label><button type="button" onClick={() => directoryInput.current?.click()}><Plus size={14} />导入目录</button><button type="button" onClick={() => zipInput.current?.click()}><Plus size={14} />导入 ZIP</button><input ref={directoryInput} type="file" hidden multiple {...({ webkitdirectory: '', directory: '' } as Record<string, string>)} onChange={(event) => void importSkills(event.target.files)} /><input ref={zipInput} type="file" hidden accept=".zip,application/zip" onChange={(event) => void importSkills(event.target.files)} /></div></div>
 					<div className="skill-git-import"><input value={gitURL} onChange={(event) => setGitURL(event.target.value)} placeholder="GitHub 仓库地址，例如 https://github.com/openai/skills" /><button type="button" disabled={!gitURL.trim() || state === 'saving'} onClick={() => void installGitSkill()}><Plus size={14} />从 GitHub 安装</button>{gitURL.trim() && <a className="skill-git-link" href={gitURL.trim()} target="_blank" rel="noreferrer" title="打开 GitHub 页面"><ExternalLink size={14} />查看页面</a>}</div>
 					{downloadProgress && <div className="skill-download-progress"><div className="skill-download-progress-bar"><i style={{ width: `${downloadProgress.total > 0 ? Math.min(100, downloadProgress.downloaded * 100 / downloadProgress.total) : 8}%` }} /></div><span>{downloadProgress.total > 0 ? `${Math.round(downloadProgress.downloaded * 100 / downloadProgress.total)}%` : '准备中'} · {formatBytes(downloadProgress.downloaded)}{downloadProgress.total > 0 ? ` / ${formatBytes(downloadProgress.total)}` : ''} · {formatTransferRate(downloadProgress.bytesPerSecond)}{downloadProgress.url && <a href={downloadProgress.url} target="_blank" rel="noreferrer">查看 GitHub 页面</a>}</span></div>}
-					{marketSkills.length > 0 && <div className="skill-market"><div className="skill-market-title"><strong>A 股精选 Skill</strong><span>easy-stock 投研目录</span></div><div className="skill-market-grid">{marketSkills.map((entry) => <article className="skill-market-card" key={entry.id}><div><strong>{entry.name}</strong><small>{entry.category}</small></div><p>{entry.description}</p><button type="button" disabled={marketInstalled(entry) || state === 'saving'} onClick={() => void installGitSkillFromMarket(entry)}>{marketInstalled(entry) ? '已安装' : '安装'}</button></article>)}</div></div>}
-					{marketSources.length > 0 && <div className="skill-market-sources"><div className="skill-market-title"><strong>更多市场</strong><span>打开目录浏览后，可复制仓库地址或下载 ZIP 导入</span></div><div className="skill-market-source-list">{marketSources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}><span><strong>{source.name}</strong><small>{source.region}</small></span><em>{source.description}</em></a>)}</div></div>}
+
 					<div className="skill-settings-list">
 						{filteredSkills.map((skill) => <div className="skill-setting-item" key={skill.name}><label><span><strong>{skill.name}</strong><small>{skill.category} · {skill.description || '暂无描述'}</small></span><input type="checkbox" checked={skill.enabled} onChange={(event) => setSkills((current) => current.map((item) => item.name === skill.name ? { ...item, enabled: event.target.checked } : item))} /></label><button type="button" className="skill-item-delete" title={`删除 ${skill.name}`} aria-label={`删除 ${skill.name}`} disabled={state === 'saving'} onClick={() => void deleteSkill(skill.name)}><Trash2 size={13} /></button></div>)}
 						{!filteredSkills.length && <div className="agent-settings-empty">没有匹配的本机 Skill</div>}
 					</div>
-				</div>
+					<details className="settings-skill-market"><summary>技能市场与来源</summary>
+					{marketSkills.length > 0 && <div className="skill-market"><div className="skill-market-title"><strong>A 股精选 Skill</strong><span>easy-stock 投研目录</span></div><div className="skill-market-grid">{marketSkills.map((entry) => <article className="skill-market-card" key={entry.id}><div><strong>{entry.name}</strong><small>{entry.category}</small></div><p>{entry.description}</p><button type="button" disabled={marketInstalled(entry) || state === 'saving'} onClick={() => void installGitSkillFromMarket(entry)}>{marketInstalled(entry) ? '已安装' : '安装'}</button></article>)}</div></div>}
+					{marketSources.length > 0 && <div className="skill-market-sources"><div className="skill-market-title"><strong>更多市场</strong><span>打开目录浏览后，可复制仓库地址或下载 ZIP 导入</span></div><div className="skill-market-source-list">{marketSources.map((source) => <a href={source.url} target="_blank" rel="noreferrer" key={source.id}><span><strong>{source.name}</strong><small>{source.region}</small></span><em>{source.description}</em></a>)}</div></div>}
+					</details>
+				</div>}
 
-				<div className="agent-settings-block">
+				{section === 'mcp' && <div className="agent-settings-block">
 					<div className="agent-settings-heading"><div><strong>MCP Servers</strong><span>{servers.filter((server) => server.enabled).length}/{servers.length} 个已启用</span></div><button type="button" onClick={addServer}><Plus size={14} />添加 MCP</button></div>
 					<div className="mcp-server-list">
 						{servers.map((server) => <MCPServerCard server={server} onChange={(patch) => updateServer(server.id, patch)} onRemove={() => setServers((current) => current.filter((item) => item.id !== server.id))} onEntryChange={updateSecretEntry} onEntryAdd={addSecretEntry} onEntryRemove={removeSecretEntry} key={server.id} />)}
 						{!servers.length && <div className="agent-settings-empty"><Network size={20} /><strong>尚未配置 MCP Server</strong><span>可以添加本机命令或远程 HTTP/SSE 服务。</span></div>}
 					</div>
-				</div>
+				</div>}
 			</>}
-			<div className={`agent-settings-footer ${state}`}><span>{state === 'saved' ? <CheckCircle2 size={14} /> : state === 'error' ? <CircleAlert size={14} /> : <ShieldCheck size={14} />}{message || 'MCP 环境变量和请求头按密钥处理，页面不会取回已保存的原文。'}</span><button type="button" onClick={() => void save()} disabled={!config || state === 'loading' || state === 'saving'}>{state === 'saving' ? <LoaderCircle className="spin" size={15} /> : <Save size={15} />}保存 Skill/MCP</button></div>
+			<SettingsFooter><div className={`settings-footer agent-settings-footer ${state}`}><span role={state === 'error' ? 'alert' : 'status'}>{state === 'saved' ? <CheckCircle2 size={14}/> : state === 'error' ? <CircleAlert size={14}/> : <ShieldCheck size={14}/>}<span>{message || (draft.dirty ? '本页有未保存修改，切换页面会保留。' : section === 'skills' ? '仅保存技能启用状态，不影响 MCP 配置。' : '环境变量和请求头按密钥处理，留空保留原值。')}</span></span><button type="button" className="settings-reset" onClick={draft.reset} disabled={!draft.dirty || state === 'saving'}>还原本页</button><button type="button" className="settings-save" onClick={() => void save()} disabled={!config || !loaded || state === 'loading' || state === 'saving'}>{state === 'saving' ? <LoaderCircle className="spin" size={15}/> : <Save size={15}/>}保存{section === 'skills' ? ' SKILL' : ' MCP'}</button></div></SettingsFooter>
 		</SettingsSection>
 	);
 }

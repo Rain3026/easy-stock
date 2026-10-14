@@ -149,7 +149,10 @@ func (s *ResearchService) execute(ctx context.Context, key string, job ResearchJ
 		previous := job
 		execution.resume = &previous
 	}
+	var publishMu sync.Mutex
 	execution.save = func(cp *ResearchCheckpoint) error {
+		publishMu.Lock()
+		defer publishMu.Unlock()
 		job.Checkpoint = cp
 		job.UpdatedAt = time.Now().UTC()
 		// A cancellation must not discard the last completed model stage.
@@ -159,6 +162,8 @@ func (s *ResearchService) execute(ctx context.Context, key string, job ResearchJ
 	}
 	ctx = context.WithValue(ctx, researchExecutionKey{}, execution)
 	publish := func(stage, message string, analysis *Analysis, snapshot *ResearchSnapshot) error {
+		publishMu.Lock()
+		defer publishMu.Unlock()
 		job.Stage = stage
 		job.Message = message
 		job.Status = "running"

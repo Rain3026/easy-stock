@@ -235,3 +235,29 @@ func TestLadderWeekendUsesFridayPoolAndQuotes(t *testing.T) {
 		t.Fatalf("Friday quotes should match the weekend snapshot: %v", err)
 	}
 }
+
+func TestLadderRejectsFutureRestoredSnapshot(t *testing.T) {
+	db := filepath.Join(t.TempDir(), "radar.db")
+	s := NewServer(Config{ThemeRadarDBPath: db})
+	bad := limitUpLadderData{Current: limitUpLadderDay{TradeDate: "2099-01-01"}}
+	s.saveLimitUpProgress(shortTermProgress[limitUpLadderData]{Data: &bad})
+	if err := s.Close(); err != nil {
+		t.Fatal(err)
+	}
+	restored := NewServer(Config{ThemeRadarDBPath: db})
+	defer restored.Close()
+	if restored.limitUpProgress.value.Data != nil {
+		t.Fatal("future dated persisted pool accepted as current")
+	}
+}
+func TestUsableLadderDatePreopen(t *testing.T) {
+	now := time.Date(2026, 10, 14, 0, 30, 0, 0, foundation.AStockLocation)
+	for _, tt := range []struct {
+		date string
+		want bool
+	}{{"2026-10-13", true}, {"2026-10-14", false}, {"2026-10-12", true}} {
+		if usableLadderDate(&limitUpLadderData{Current: limitUpLadderDay{TradeDate: tt.date}}, now) != tt.want {
+			t.Fatalf("date %s", tt.date)
+		}
+	}
+}

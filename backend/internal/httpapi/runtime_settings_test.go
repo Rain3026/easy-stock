@@ -64,3 +64,45 @@ func TestRuntimeSelectionProbesResponsesBeforeCommit(t *testing.T) {
 		t.Fatal("credential exposed")
 	}
 }
+
+func TestWorkBuddySettingsSaveProtocolRollbackAndSecrets(t *testing.T) {
+	store, err := appsettings.Open(filepath.Join(t.TempDir(), "settings.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "workbuddy")
+	os.WriteFile(binary, []byte("fixture"), 0700)
+	service := agent.NewService(agent.ServiceConfig{Hermes: agent.HermesConfig{Home: t.TempDir()}, WorkBuddy: agent.WorkBuddyConfig{CLIPath: binary, Home: t.TempDir()}})
+	server := NewServer(Config{SettingsStore: store, AgentGateway: service})
+	save := func(mode string) *httptest.ResponseRecorder {
+		w := httptest.NewRecorder()
+		body := `{"agent_runtime":"workbuddy","llm":{"provider":"custom","base_url":"http://127.0.0.1:1/v1","model":"fixture","api_mode":"` + mode + `","api_key":"workbuddy-test-secret"}}`
+		server.ServeHTTP(w, httptest.NewRequest(http.MethodPut, "/api/v1/settings", strings.NewReader(body)))
+		return w
+	}
+	for _, mode := range []string{"auto", "responses", "anthropic_messages"} {
+		rejected := save(mode)
+		if rejected.Code != 400 || !strings.Contains(rejected.Body.String(), "WorkBuddy 仅支持 Chat Completions") {
+			t.Fatalf("wrong protocol accepted: %d %s", rejected.Code, rejected.Body)
+		}
+		if service.ActiveRuntime() != agent.Hermes || store.Snapshot().AgentRuntime == agent.WorkBuddy {
+			t.Fatal("failed save changed engine")
+		}
+	}
+	saved := save("chat_completions")
+	if saved.Code != 200 {
+		t.Fatal(saved.Body)
+	}
+	if service.ActiveRuntime() != agent.WorkBuddy || store.Snapshot().AgentRuntime != agent.WorkBuddy {
+		t.Fatal("selection not persisted")
+	}
+	if strings.Contains(saved.Body.String(), "workbuddy-test-secret") {
+		t.Fatal("key exposed")
+	}
+	if key, err := service.ModelAPIKey(); err != nil || key != "workbuddy-test-secret" {
+		t.Fatal("shared key missing")
+	}
+	if !strings.Contains(saved.Body.String(), `"workbuddy"`) {
+		t.Fatal("status missing")
+	}
+}

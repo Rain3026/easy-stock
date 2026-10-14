@@ -6,6 +6,7 @@ import (
 
 	"easy-stock/backend/internal/agent"
 	"easy-stock/backend/internal/foundation"
+	"easy-stock/backend/internal/skillregistry"
 )
 
 const ResearchPromptVersion = "stock-research-v10"
@@ -44,18 +45,21 @@ type PriceAnchor struct {
 }
 
 type ResearchSnapshot struct {
-	ID          string           `json:"id"`
-	Version     int              `json:"version"`
-	Symbol      string           `json:"symbol"`
-	Name        string           `json:"name"`
-	CapturedAt  time.Time        `json:"captured_at"`
-	CutoffAt    time.Time        `json:"cutoff_at"`
-	Quote       foundation.Quote `json:"quote"`
-	Sources     []ResearchSource `json:"sources"`
-	Anchors     []PriceAnchor    `json:"anchors"`
-	Limitations []string         `json:"limitations"`
-	DailyBars   []AIDailyBar     `json:"daily_bars"`
-	Baseline    Scorecard        `json:"rule_baseline"`
+	SkillRefs   []skillregistry.Reference `json:"skill_refs,omitempty"`
+	ToolCalls   []agent.ToolCallRecord    `json:"tool_calls,omitempty"`
+	EvidenceID  string                    `json:"evidence_id,omitempty"`
+	ID          string                    `json:"id"`
+	Version     int                       `json:"version"`
+	Symbol      string                    `json:"symbol"`
+	Name        string                    `json:"name"`
+	CapturedAt  time.Time                 `json:"captured_at"`
+	CutoffAt    time.Time                 `json:"cutoff_at"`
+	Quote       foundation.Quote          `json:"quote"`
+	Sources     []ResearchSource          `json:"sources"`
+	Anchors     []PriceAnchor             `json:"anchors"`
+	Limitations []string                  `json:"limitations"`
+	DailyBars   []AIDailyBar              `json:"daily_bars"`
+	Baseline    Scorecard                 `json:"rule_baseline"`
 }
 
 type ResearchClaim struct {
@@ -201,7 +205,9 @@ type ResearchPromptCompression struct {
 }
 
 type ResearchReport struct {
-	Runtime string `json:"runtime,omitempty"`
+	SkillRefs []skillregistry.Reference `json:"skill_refs,omitempty"`
+	ToolCalls []agent.ToolCallRecord    `json:"tool_calls,omitempty"`
+	Runtime   string                    `json:"runtime,omitempty"`
 	ResearchSynthesis
 	SnapshotID        string                    `json:"snapshot_id"`
 	SnapshotVersion   int                       `json:"snapshot_version"`

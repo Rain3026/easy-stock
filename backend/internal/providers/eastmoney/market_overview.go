@@ -37,7 +37,7 @@ var marketIndexCatalog = []marketIndexDefinition{
 	{ID: "taiwan", SecID: "100.TWII", Name: "台湾加权", Region: "亚太", Market: "TW", Currency: "TWD"},
 	{ID: "dow", SecID: "100.DJIA", Name: "道琼斯", Region: "美洲", Market: "US", Currency: "USD", Core: true},
 	{ID: "sp500", SecID: "100.SPX", Name: "标普500", Region: "美洲", Market: "US", Currency: "USD", Core: true},
-	{ID: "nasdaq", SecID: "100.NDX", Name: "纳斯达克", Region: "美洲", Market: "US", Currency: "USD", Core: true},
+	{ID: "nasdaq", SecID: "100.NDX", Name: "纳斯达克综合", Region: "美洲", Market: "US", Currency: "USD", Core: true},
 	{ID: "ftse", SecID: "100.FTSE", Name: "英国富时100", Region: "欧洲", Market: "UK", Currency: "GBP"},
 	{ID: "dax", SecID: "100.GDAXI", Name: "德国DAX", Region: "欧洲", Market: "DE", Currency: "EUR"},
 	{ID: "cac", SecID: "100.FCHI", Name: "法国CAC40", Region: "欧洲", Market: "FR", Currency: "EUR"},
@@ -101,10 +101,10 @@ func (c *Client) MarketIndexes(ctx context.Context, scope string) ([]foundation.
 		}
 		tradeTime := time.Unix(int64(asFloat(raw["f124"])), 0)
 		items = append(items, foundation.MarketIndexSnapshot{
-			ID: definition.ID, SecID: definition.SecID, Code: asString(raw["f12"]), Name: firstString(asString(raw["f14"]), definition.Name),
+			ID: definition.ID, SecID: definition.SecID, Code: asString(raw["f12"]), Name: definition.Name,
 			Region: definition.Region, Market: definition.Market, Currency: definition.Currency,
 			Price: asFloat(raw["f2"]), ChangePercent: asFloat(raw["f3"]), Change: asFloat(raw["f4"]), TradeTime: tradeTime,
-			Status: indexStatus(tradeTime, time.Now()), Meta: meta,
+			Status: foundation.IndexSessionStatus(definition.Market, tradeTime, time.Now()), Meta: meta,
 		})
 	}
 	order := map[string]int{}
@@ -323,97 +323,43 @@ func (c *Client) MarketMarginSeries(ctx context.Context, limit int) ([]foundatio
 	if limit > 500 {
 		limit = 500
 	}
-
-	endpoint := c.datacenterBaseURL + "/api/data/v1/get"
 	start := time.Now()
-	pointsByDate := make(map[string]*foundation.MarketMarginPoint, limit+1)
-	lastRequestURL := ""
+	points := []foundation.MarginExchangePoint{}
+	lastURL := ""
 	for page := 1; page <= 6; page++ {
-		params := url.Values{}
-		params.Set("reportName", "RPTA_WEB_RZRQ_LSSH")
-		params.Set("columns", "DIM_DATE,SCDM,XOB_MARKET_0001,RZYE,RQYE,RZRQYE,RZMRE,RZCHE,RZJME,RQMCL,RQCHL")
-		params.Set("source", "WEB")
-		params.Set("client", "WEB")
-		params.Set("sortColumns", "DIM_DATE,SCDM")
-		params.Set("sortTypes", "-1,1")
-		params.Set("pageNumber", strconv.Itoa(page))
-		params.Set("pageSize", "500")
-		requestURL := endpoint + "?" + params.Encode()
-		lastRequestURL = requestURL
+		params := url.Values{"reportName": {"RPTA_WEB_RZRQ_LSSH"}, "columns": {"DIM_DATE,SCDM,RZYE,RQYE,RZRQYE,RZMRE,RZCHE,RQMCL,RQCHL"}, "source": {"WEB"}, "client": {"WEB"}, "sortColumns": {"DIM_DATE,SCDM"}, "sortTypes": {"-1,1"}, "pageNumber": {strconv.Itoa(page)}, "pageSize": {"500"}}
+		lastURL = c.datacenterBaseURL + "/api/data/v1/get?" + params.Encode()
 		var payload struct {
-			Success bool   `json:"success"`
-			Message string `json:"message"`
+			Success bool `json:"success"`
 			Result  struct {
-				Pages int `json:"pages"`
-				Data  []struct {
-					Date                         string  `json:"DIM_DATE"`
-					FinancingBalance             float64 `json:"RZYE"`
-					SecuritiesLendingBalance     float64 `json:"RQYE"`
-					MarginBalance                float64 `json:"RZRQYE"`
-					FinancingBuyAmount           float64 `json:"RZMRE"`
-					FinancingRepayAmount         float64 `json:"RZCHE"`
-					FinancingNetBuyAmount        float64 `json:"RZJME"`
-					SecuritiesLendingSellVolume  float64 `json:"RQMCL"`
-					SecuritiesLendingRepayVolume float64 `json:"RQCHL"`
-				} `json:"data"`
+				Pages int              `json:"pages"`
+				Data  []map[string]any `json:"data"`
 			} `json:"result"`
 		}
-		if err := c.getJSONWithRetry(ctx, requestURL, &payload); err != nil {
+		if err := c.getJSONWithRetry(ctx, lastURL, &payload); err != nil {
 			return nil, foundation.SourceMeta{}, err
 		}
 		if !payload.Success {
-			return nil, foundation.SourceMeta{}, fmt.Errorf("eastmoney margin balance unavailable: %s", firstString(payload.Message, "unknown response"))
+			return nil, foundation.SourceMeta{}, fmt.Errorf("eastmoney margin unavailable")
 		}
 		for _, raw := range payload.Result.Data {
-			tradeDate := strings.TrimSpace(strings.SplitN(raw.Date, " ", 2)[0])
-			if tradeDate == "" {
-				continue
+			exchange := map[string]string{"001": "SZSE", "002": "BSE", "007": "SSE"}[asString(raw["SCDM"])]
+			if exchange == "" {
+				return nil, foundation.SourceMeta{}, fmt.Errorf("unknown margin exchange")
 			}
-			point := pointsByDate[tradeDate]
-			if point == nil {
-				point = &foundation.MarketMarginPoint{TradeDate: tradeDate}
-				pointsByDate[tradeDate] = point
+			for _, key := range []string{"RZYE", "RQYE", "RZRQYE", "RZMRE", "RZCHE", "RQMCL", "RQCHL"} {
+				if _, ok := raw[key].(float64); !ok {
+					return nil, foundation.SourceMeta{}, fmt.Errorf("missing margin %s", key)
+				}
 			}
-			point.FinancingBalance += raw.FinancingBalance
-			point.SecuritiesLendingBalance += raw.SecuritiesLendingBalance
-			point.MarginBalance += raw.MarginBalance
-			point.FinancingBuyAmount += raw.FinancingBuyAmount
-			point.FinancingRepayAmount += raw.FinancingRepayAmount
-			point.FinancingNetBuyAmount += raw.FinancingNetBuyAmount
-			point.SecuritiesLendingSellVolume += raw.SecuritiesLendingSellVolume
-			point.SecuritiesLendingRepayVolume += raw.SecuritiesLendingRepayVolume
+			points = append(points, foundation.MarginExchangePoint{Exchange: exchange, Point: foundation.MarketMarginPoint{TradeDate: strings.SplitN(asString(raw["DIM_DATE"]), " ", 2)[0], FinancingBalance: asFloat(raw["RZYE"]), SecuritiesLendingBalance: asFloat(raw["RQYE"]), MarginBalance: asFloat(raw["RZRQYE"]), FinancingBuyAmount: asFloat(raw["RZMRE"]), FinancingRepayAmount: asFloat(raw["RZCHE"]), SecuritiesLendingSellVolume: asFloat(raw["RQMCL"]), SecuritiesLendingRepayVolume: asFloat(raw["RQCHL"])}})
 		}
-		if len(pointsByDate) >= limit+1 || len(payload.Result.Data) < 500 || (payload.Result.Pages > 0 && page >= payload.Result.Pages) {
+		if len(points) >= (limit+3)*3 || len(payload.Result.Data) < 500 || (payload.Result.Pages > 0 && page >= payload.Result.Pages) {
 			break
 		}
 	}
-	if len(pointsByDate) == 0 {
-		return nil, foundation.SourceMeta{}, fmt.Errorf("eastmoney returned no margin balance history")
-	}
-
-	tradeDates := make([]string, 0, len(pointsByDate))
-	for tradeDate := range pointsByDate {
-		tradeDates = append(tradeDates, tradeDate)
-	}
-	sort.Strings(tradeDates)
-	meta := foundation.SourceMeta{
-		Source: "eastmoney:margin-balance", SourceURL: lastRequestURL,
-		AvailableFields: []string{"financing_balance", "securities_lending_balance", "margin_balance", "margin_balance_change", "financing_buy_amount", "financing_repay_amount", "financing_net_buy_amount", "securities_lending_sell_volume", "securities_lending_repay_volume"},
-		FetchedAt:       time.Now(), LatencyMS: time.Since(start).Milliseconds(), TradeDate: tradeDates[len(tradeDates)-1],
-	}
-	points := make([]foundation.MarketMarginPoint, 0, len(tradeDates))
-	for _, tradeDate := range tradeDates {
-		point := *pointsByDate[tradeDate]
-		if len(points) > 0 {
-			point.MarginBalanceChange = point.MarginBalance - points[len(points)-1].MarginBalance
-		}
-		point.Meta = meta
-		points = append(points, point)
-	}
-	if len(points) > limit {
-		points = points[len(points)-limit:]
-	}
-	return points, meta, nil
+	meta := foundation.SourceMeta{Family: "eastmoney", Channel: "http", Source: "eastmoney:margin-balance", SourceURL: lastURL, AmountUnit: "CNY", FetchedAt: time.Now(), LatencyMS: time.Since(start).Milliseconds(), AvailableFields: []string{"financing_balance", "securities_lending_balance", "margin_balance", "margin_balance_change", "financing_buy_amount", "financing_repay_amount", "financing_net_buy_amount", "securities_lending_sell_volume", "securities_lending_repay_volume"}}
+	return foundation.CompleteMarginSeries(points, limit, meta)
 }
 
 func (c *Client) MarketBillboard(ctx context.Context, tradeDate string, limit int) ([]foundation.MarketBillboardItem, foundation.SourceMeta, error) {
@@ -431,7 +377,7 @@ func (c *Client) MarketBillboard(ctx context.Context, tradeDate string, limit in
 	}
 	var lastMeta foundation.SourceMeta
 	for attempt := 0; attempt < 8; attempt++ {
-		if date.Weekday() == time.Saturday || date.Weekday() == time.Sunday {
+		if !explicit && (date.Weekday() == time.Saturday || date.Weekday() == time.Sunday) {
 			date = date.AddDate(0, 0, -1)
 			continue
 		}
@@ -453,7 +399,7 @@ func (c *Client) fetchBillboardDate(ctx context.Context, tradeDate string, limit
 	params := url.Values{}
 	params.Set("reportName", "RPT_DAILYBILLBOARD_DETAILSNEW")
 	params.Set("columns", "ALL")
-	params.Set("filter", "(TRADE_DATE>='"+tradeDate+" 00:00:00')")
+	params.Set("filter", "(TRADE_DATE='"+tradeDate+" 00:00:00')")
 	params.Set("pageNumber", "1")
 	params.Set("pageSize", strconv.Itoa(limit))
 	params.Set("sortColumns", "BILLBOARD_NET_AMT")
@@ -486,6 +432,9 @@ func (c *Client) fetchBillboardDate(ctx context.Context, tradeDate string, limit
 	items := make([]foundation.MarketBillboardItem, 0, len(payload.Result.Data))
 	seen := map[string]bool{}
 	for _, raw := range payload.Result.Data {
+		if actual := asString(raw["TRADE_DATE"]); actual != "" && !strings.HasPrefix(actual, tradeDate) {
+			return nil, meta, fmt.Errorf("billboard response date mismatch")
+		}
 		symbol := firstString(asString(raw["SECUCODE"]), asString(raw["SECURITY_CODE"]))
 		key := symbol + "|" + asString(raw["EXPLANATION"])
 		if seen[key] {

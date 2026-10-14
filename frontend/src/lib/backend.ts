@@ -108,7 +108,7 @@ export type SecretSettingStatus = {
 
 export type AppSettings = {
 	notifications?: NotificationSettings;
-	agent_runtime?: 'hermes' | 'codex';
+	agent_runtime?: 'hermes' | 'codex' | 'workbuddy';
 	runtimes?: Record<string, { available: boolean; configured: boolean; version?: string; message?: string; }>;
 	agent: {
         configuration_id?: string;
@@ -227,7 +227,7 @@ export type LLMConnectionTestResult = {
 	provider: string;
 	model: string;
 	api_mode: string;
-	runtime: 'hermes' | 'codex' | string;
+	runtime: 'hermes' | 'codex' | 'workbuddy' | string;
 	latency_ms: number;
 	response: string;
 };
@@ -266,10 +266,19 @@ export type SourceHealth = {
   category: string;
   ok: boolean;
   message?: string;
-  checked_at: string;
+  checked_at?: string;
+  status?: string;
+  role?: string;
+  capability?: string;
 };
 
 export type SourceMeta = {
+  family?: string;
+  channel?: string;
+  amount_unit?: string;
+  volume_unit?: string;
+  adjustment?: string;
+  missing_symbols?: string[];
   source: string;
   source_url?: string;
   available_fields?: string[];
@@ -488,6 +497,7 @@ export type MarketBillboardItem = {
 };
 
 export type MarketBillboardSeat = {
+ available_fields?: string[];
 	direction: 'buy' | 'sell' | string;
 	rank: number;
 	name: string;
@@ -1251,7 +1261,7 @@ export type PortfolioExpectationJob = {
 	prompt_version: string;
 	portfolio_hash: string;
 	summary_hash: string;
-	request: { summary_date: string; trader_profile: PortfolioTraderProfile; holdings: PortfolioHolding[]; force?: boolean };
+	request: { summary_date: string; snapshot_id?: string; trader_profile: PortfolioTraderProfile; holdings: PortfolioHolding[]; force?: boolean };
 	results: PortfolioHoldingResult[];
 	completed_stocks: number;
 	total_stocks: number;

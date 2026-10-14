@@ -93,4 +93,35 @@ async def serve_tools():
     async with stdio_server() as (read, write):
         await server.run(read, write, server.create_initialization_options())
 
-anyio.run(serve_sse if spec['transport'] == 'sse' else serve_tools)
+async def serve_app_data():
+    import urllib.request
+    from mcp.server import Server
+    from mcp.types import Tool, ToolAnnotations, TextContent, ListToolsResult, CallToolResult
+    def request(path, data=None):
+        raw = None if data is None else json.dumps(data, ensure_ascii=False).encode()
+        req = urllib.request.Request(spec['url'] + path, data=raw, headers={
+            'Authorization': 'Bearer ' + spec['token'], 'Content-Type': 'application/json'})
+        # Loopback task scope; never inherit proxy routing or user credentials.
+        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        with opener.open(req, timeout=42) as response:
+            return json.load(response)
+    async def list_tools():
+        rows = await anyio.to_thread.run_sync(lambda: request('/tools'))
+        return [Tool(name=r['name'], description=r['description'], inputSchema=r['inputSchema'], annotations=ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)) for r in rows]
+    async def call_tool(name, arguments):
+        result = await anyio.to_thread.run_sync(lambda: request('/call', {'name': name, 'arguments': arguments or {}}))
+        return CallToolResult(content=[TextContent(type='text', text=json.dumps(result, ensure_ascii=False))], isError=bool(result.get('isError')))
+    if hasattr(Server, 'list_tools'):
+        server = Server('easy-stock-data')
+        server.list_tools()(list_tools)
+        server.call_tool()(call_tool)
+    else:
+        async def on_list(ctx, params):
+            return ListToolsResult(tools=await list_tools())
+        async def on_call(ctx, params):
+            return await call_tool(params.name, params.arguments)
+        server = Server('easy-stock-data', on_list_tools=on_list, on_call_tool=on_call)
+    async with stdio_server() as (read, write):
+        await server.run(read, write, server.create_initialization_options())
+
+anyio.run(serve_app_data if spec['transport'] == 'app_data' else serve_sse if spec['transport'] == 'sse' else serve_tools)

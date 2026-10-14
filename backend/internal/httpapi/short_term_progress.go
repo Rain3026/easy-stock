@@ -145,6 +145,12 @@ type cachedConceptProvider interface {
 	CachedStockCatalog() []foundation.StockCatalogEntry
 }
 
+// A legacy cache can contain a not-yet-open date from an upstream pool.
+// Never let that future label suppress a valid prior-session refresh.
+func usableLadderDate(data *limitUpLadderData, now time.Time) bool {
+	return data != nil && data.Current.TradeDate != "" && data.Current.TradeDate <= foundation.LatestAStockSession(now)
+}
+
 func (s *Server) progressiveLimitUpLadder(w http.ResponseWriter, r *http.Request) {
 	value := s.limitUpProgress.read(r.URL.Query().Get("refresh_id") != "", r.URL.Query().Get("refresh") == "1", 25*time.Second,
 		[]string{"primary", "history", "themes", "concepts", "quotes"}, s.refreshLimitUpProgress, s.saveLimitUpProgress)
@@ -203,7 +209,7 @@ func (s *Server) refreshLimitUpProgress(ctx context.Context, publish func(shortT
 				initial.Advance = []limitUpAdvanceStep{}
 				// Do not replace a richer restored snapshot with the same retained pool.
 				s.limitUpProgress.mu.Lock()
-				hasSnapshot := s.limitUpProgress.value.Data != nil
+				hasSnapshot := usableLadderDate(s.limitUpProgress.value.Data, time.Now())
 				s.limitUpProgress.mu.Unlock()
 				if !hasSnapshot {
 					publish(shortTermProgress[limitUpLadderData]{Data: &initial, Stale: true, Steps: copyStrings(steps), Errors: copyStrings(errs)})
@@ -299,7 +305,7 @@ func (s *Server) refreshLimitUpProgress(ctx context.Context, publish func(shortT
 						built.Intraday = &cached
 					}
 					data = &built
-					if previous != nil && built.Current.TradeDate < previous.Current.TradeDate {
+					if usableLadderDate(previous, time.Now()) && built.Current.TradeDate < previous.Current.TradeDate {
 						retained := *previous
 						retained.Meta.Stale = true
 						data = &retained

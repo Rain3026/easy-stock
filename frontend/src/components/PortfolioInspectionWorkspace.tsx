@@ -1,3 +1,8 @@
+import {PortfolioOverview} from './PortfolioOverview';
+import { ResearchContextButton } from './ResearchContextButton';
+import { PortfolioVersions } from './PortfolioVersions';
+import { PortfolioTomorrowExpectation } from './PortfolioTomorrowExpectation';
+import type { DailySnapshot } from '../lib/daily-research';
 import { portfolioScoringVersion } from '../lib/portfolio-optimization';
 import {
 	Activity,
@@ -43,6 +48,7 @@ import './portfolio-inspection.css';
 import { PortfolioOptimizationWorkspace } from './PortfolioOptimizationReport';
 
 type Props = {
+ activeTab?:string;initialRecordID?:string;onTabChange?:(tab:string)=>void;
 	config: BackendConfig | null;
 	refreshKey: number;
 	onOpenSettings: () => void;
@@ -52,8 +58,11 @@ type Props = {
 
 const directoryStorageKey = 'easy-stock.stock-directory.v1';
 
-export function PortfolioInspectionWorkspace({ config, refreshKey, onOpenSettings, onOpenNotificationSettings, onOpenStockAnalysis }: Props) {
+export function PortfolioInspectionWorkspace({ config, refreshKey, onOpenSettings, onOpenNotificationSettings, onOpenStockAnalysis,activeTab,initialRecordID,onTabChange }: Props) {
 	const [plans, setPlans] = useState(readPortfolioPlans);
+ const section=activeTab||"risk";
+ const[marketSnapshots,setMarketSnapshots]=useState<DailySnapshot[]>([]);const[snapshotID,setSnapshotID]=useState('');
+ useEffect(()=>{if(!config||section!=='tomorrow')return;let alive=true;void requestJSON<{data:DailySnapshot[]}>(config,'/api/v1/daily-research').then(p=>{if(alive){const market=p.data.filter(v=>!v.entity_id||v.entity_id==='market:cn');setMarketSnapshots(market);setSnapshotID(v=>market.some(s=>s.id===v)?v:market[0]?.id||'')}}).catch(e=>{if(alive)setError(e.message)});return()=>{alive=false}},[config,section]);
 	const activePlan = activePortfolioPlan(plans);
 	const draft = activePlan.draft;
 	const [directory, setDirectory] = useState<StockDirectoryEntry[]>(loadCachedDirectory);
@@ -74,6 +83,7 @@ export function PortfolioInspectionWorkspace({ config, refreshKey, onOpenSetting
 	const [notice, setNotice] = useState('');
  const [optimizationSignal,setOptimizationSignal] = useState(0);
 
+ useEffect(()=>{if(!config||!initialRecordID)return;let alive=true;void requestJSON<{data:PortfolioInspectionJob}>(config,`/api/v1/portfolio-inspections/${encodeURIComponent(initialRecordID)}`).then(p=>{if(alive)setJob(p.data)}).catch(e=>{if(alive)setError(e.message)});return()=>{alive=false}},[config,initialRecordID]);
 	const totalWeight = useMemo(() => draft.holdings.reduce((total, item) => total + item.weight, 0), [draft.holdings]);
 	const running = job?.status === 'running';
 
@@ -253,8 +263,8 @@ export function PortfolioInspectionWorkspace({ config, refreshKey, onOpenSetting
 		onApplyToPlan={originalPlan ? (holdings) => void applyToOriginal(holdings) : undefined} originalPlanName={originalPlan?.name} applyingToPlan={applying}
 		onRefreshSource={() => void startInspection([], sourceRequest)} applyBusy={starting || applying || Boolean(running)} /> : null;
 
-	return <div className="portfolio-inspection-workspace">
-		<aside className="portfolio-history stock-ai-panel" aria-label="巡检历史">
+	return <div className={`portfolio-inspection-workspace ${section==='overview'||section==='tomorrow'?'portfolio-single':''}`}>
+		{(section==='risk'||section==='adjustments')&&<aside className="portfolio-history stock-ai-panel" aria-label="巡检历史">
 			<header><History size={16} /><div><strong>巡检记录</strong><small>{historyScope === 'current' ? activePlan.name : historyScope === 'all' ? '全部方案' : '历史未绑定'}</small></div></header>
 			<select className="portfolio-history-scope" aria-label="巡检记录范围" value={historyScope} disabled={starting || applying || Boolean(running)} onChange={(event) => setHistoryScope(event.target.value as typeof historyScope)}><option value="current">当前方案</option><option value="all">全部记录</option><option value="unbound">未绑定记录</option></select>
 			<div>
@@ -266,26 +276,31 @@ export function PortfolioInspectionWorkspace({ config, refreshKey, onOpenSetting
 					<ChevronRight size={14} />
 				</button>)}
 			</div>
-		</aside>
+		</aside>}
 
 		<section className="portfolio-inspection-main">
 			<PortfolioPlanPicker key={activePlan.id} state={plans} disabled={starting || applying || removing || savingSchedule || Boolean(running)} onSelect={(id) => changePlan(() => selectPortfolioPlan(id), true)} onAdd={() => changePlan(addPortfolioPlan, true)} onRename={(name) => changePlan(() => renamePortfolioPlan(activePlan.id, name))} onRemove={deletePlan} />
-   <PortfolioSchedulePanel key={`schedule:${activePlan.id}`} config={config} plan={activePlan} disabled={starting || applying || removing} onBusyChange={setSavingSchedule} onOpenSettings={onOpenNotificationSettings} />
+   {section==='risk'&&<PortfolioSchedulePanel key={`schedule:${activePlan.id}`} config={config} plan={activePlan} disabled={starting || applying || removing} onBusyChange={setSavingSchedule} onOpenSettings={onOpenNotificationSettings} />}
 			{notice && <div className="portfolio-notice" role="status"><CheckCircle2 size={16} /><span>{notice}</span>{appliedPlanId && <button type="button" onClick={() => changePlan(() => selectPortfolioPlan(appliedPlanId), true)}>查看持仓方案</button>}</div>}
 			{error && <div className="portfolio-error" role="alert"><CircleAlert size={16} /><span>{error}</span>{error.includes('模型') && <button type="button" onClick={onOpenSettings}>配置模型</button>}</div>}
 
-			{job && <div className="portfolio-record-binding"><span>所属方案：{originalPlan?.name || (job.request.portfolio_plan_id ? `${job.request.portfolio_plan_name || '原方案'}（已删除）` : '未绑定')}</span>{!job.request.portfolio_plan_id && <button type="button" disabled={starting || Boolean(running)} onClick={() => void bindLegacy()}>绑定到「{activePlan.name}」</button>}</div>}
+			{job?.report&&<ResearchContextButton config={config} kind="portfolio" recordID={job.id}/>}
+ {job && <div className="portfolio-record-binding"><span>所属方案：{originalPlan?.name || (job.request.portfolio_plan_id ? `${job.request.portfolio_plan_name || '原方案'}（已删除）` : '未绑定')}</span>{!job.request.portfolio_plan_id && <button type="button" disabled={starting || Boolean(running)} onClick={() => void bindLegacy()}>绑定到「{activePlan.name}」</button>}</div>}
 
-			{(!job?.report || job.status === 'running') && <>
-				<header className="stock-ai-search-hero portfolio-setup-hero"><div><span>持仓 AI 巡检</span><h2>配置持仓，检查组合风险</h2><p>选择交易风格，填写持仓占比与成本后开始巡检。</p></div><WalletCards size={32} aria-hidden="true" /></header>
-				<PortfolioSetupForm config={config} key={activePlan.id} showResearchOptions draft={draft} directory={directory} disabled={starting || applying || Boolean(running)} busy={starting || applying || Boolean(running)} actionLabel="开始 AI 巡检" busyLabel={running ? '巡检进行中' : '正在启动'} onChange={(next) => changePlan(() => writePortfolioDraft(next, activePlan.id))} onSubmit={() => void startInspection()} />
+			{section==='overview'&&<PortfolioOverview config={config} key={activePlan.id} draft={draft} directory={directory} disabled={starting||applying||Boolean(running)} onChange={next=>changePlan(()=>writePortfolioDraft(next,activePlan.id))} onRisk={()=>onTabChange?.('risk')}/>}
+{(section==='risk'&&(!job?.report || job.status === 'running')) && <>
+				<header className="stock-ai-search-hero portfolio-setup-hero"><div><span>风险巡检</span><h2>配置持仓，检查组合风险</h2><p>选择交易风格，填写持仓占比与成本后开始巡检。</p></div><WalletCards size={32} aria-hidden="true" /></header>
+				<PortfolioSetupForm config={config} key={activePlan.id} showResearchOptions={section==='risk'} draft={draft} directory={directory} disabled={starting || applying || Boolean(running)} busy={starting || applying || Boolean(running)} actionLabel="开始 AI 巡检" busyLabel={running ? '巡检进行中' : '正在启动'} onChange={(next) => changePlan(() => writePortfolioDraft(next, activePlan.id))} onSubmit={() => void startInspection()} />
 			</>}
 
 			{job?.status === 'running' && <><InspectionProgress job={job} /><button type="button" className="portfolio-task-action" disabled={starting} onClick={() => void cancelInspection()}>停止持仓分析</button></>}
 			{job?.resume_available && !running && <div className="portfolio-report-warning portfolio-recovery"><CircleAlert size={16} /><span>{job.error || '上次任务未完成，已有报告已保存'}</span><button type="button" disabled={starting} onClick={() => void resumeInspection()}>{job.results.every((r) => r.status === 'succeeded') ? '重试组合评估' : '补齐失败个股'}</button></div>}
-   {job?.report && job.status !== 'running' && (['portfolio-ai-score-v3', portfolioScoringVersion].includes(job.report.algorithm_version || '')
-    ? <PortfolioAIReportView report={job.report} afterSummary={optimization} busy={starting || applying} onOptimize={job.status === 'succeeded' && job.report.algorithm_version === portfolioScoringVersion && job.report.conclusion.score_available ? () => setOptimizationSignal((n) => n+1) : undefined} onNew={() => setJob(null)} onOpenStockAnalysis={onOpenStockAnalysis} onRefresh={(symbol) => void startInspection([symbol], sourceRequest)} />
-    : <PortfolioReportView report={job.report} afterSummary={optimization} status={job.status} onNew={() => setJob(null)} onOpenStockAnalysis={onOpenStockAnalysis} />)}
+   {section==='risk'&&job?.report && job.status !== 'running' && (['portfolio-ai-score-v3', portfolioScoringVersion].includes(job.report.algorithm_version || '')
+    ? <PortfolioAIReportView report={job.report} afterSummary={undefined} busy={starting || applying} onOptimize={job.status === 'succeeded' && job.report.algorithm_version === portfolioScoringVersion && job.report.conclusion.score_available ? () => {onTabChange?.("adjustments");setOptimizationSignal((n) => n+1)} : undefined} onNew={() => setJob(null)} onOpenStockAnalysis={onOpenStockAnalysis} onRefresh={(symbol) => void startInspection([symbol], sourceRequest)} />
+    : <PortfolioReportView report={job.report} afterSummary={undefined} status={job.status} onNew={() => setJob(null)} onOpenStockAnalysis={onOpenStockAnalysis} />)}
+ {(section==='overview'||section==='adjustments')&&<PortfolioVersions config={config}/>}
+ {section==='adjustments'&&(optimization||<div className="workspace-empty"><h2>先完成一份组合风险巡检</h2><p>调整方案将使用指定巡检报告。只保存研究方案，不产生交易。</p><button className="workspace-context-link" onClick={()=>onTabChange?.('risk')}>进入风险巡检</button></div>)}
+ {section==='tomorrow'&&<article className="workspace-card"><header><h2>组合明日预案</h2><select aria-label="明日预案市场证据" value={snapshotID} onChange={e=>setSnapshotID(e.target.value)}>{marketSnapshots.map(v=><option key={v.id} value={v.id}>{v.trade_date} · {new Date(v.cutoff).toLocaleTimeString('zh-CN')}</option>)}</select></header>{snapshotID&&marketSnapshots.find(v=>v.id===snapshotID)?<><p>按当前持仓方案与固定市场证据生成，行情刷新不会改写历史预案。</p><PortfolioTomorrowExpectation key={activePlan.id+snapshotID} config={config} summaryDate={marketSnapshots.find(v=>v.id===snapshotID)!.trade_date} snapshotID={snapshotID}/></>:<p>尚无市场事实快照，请先到今日总览保存研究快照。</p>}</article>}
 
 		</section>
 	</div>;

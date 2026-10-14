@@ -1,6 +1,7 @@
 package httpapi
 
 import (
+	"easy-stock/backend/internal/methodology"
 	"errors"
 	"net/http"
 	"os"
@@ -29,13 +30,20 @@ func (s *Server) masteryTrader(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	id := strings.TrimSpace(r.URL.Query().Get("id"))
-	if id == "" {
+	documentID := strings.TrimSpace(r.URL.Query().Get("document"))
+	if id == "" && documentID == "" {
 		writeError(w, http.StatusBadRequest, "id is required")
 		return
 	}
 	ctx, cancel := contextWithTimeout(r, 45*time.Second)
 	defer cancel()
-	trader, err := s.masteryLibrary.Trader(ctx, id)
+	var trader methodology.TraderDetail
+	var err error
+	if documentID != "" {
+		trader, err = s.masteryLibrary.TraderForDocument(ctx, documentID)
+	} else {
+		trader, err = s.masteryLibrary.Trader(ctx, id)
+	}
 	if errors.Is(err, os.ErrNotExist) {
 		writeError(w, http.StatusNotFound, "未找到该游资心法")
 		return

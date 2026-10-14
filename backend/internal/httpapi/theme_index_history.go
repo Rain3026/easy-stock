@@ -45,7 +45,7 @@ func (h *themeIndexHistory) load(ctx context.Context, symbol string, limit int) 
 		}
 		h.mu.Unlock()
 	}
-	fallbackCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	fallbackCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 	return h.fallback.AdjustedKLine(fallbackCtx, symbol, limit)
 }

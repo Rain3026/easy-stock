@@ -3,6 +3,12 @@ package foundation
 import "time"
 
 type SourceMeta struct {
+	MissingSymbols  []string   `json:"missing_symbols,omitempty"`
+	Family          string     `json:"family,omitempty"`
+	Channel         string     `json:"channel,omitempty"`
+	AmountUnit      string     `json:"amount_unit,omitempty"`
+	VolumeUnit      string     `json:"volume_unit,omitempty"`
+	Adjustment      string     `json:"adjustment,omitempty"`
 	Source          string     `json:"source"`
 	SourceURL       string     `json:"source_url,omitempty"`
 	AvailableFields []string   `json:"available_fields,omitempty"`

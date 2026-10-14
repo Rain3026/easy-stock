@@ -2,9 +2,10 @@ package portfolioinspection
 
 import "time"
 
-const ExpectationPromptVersion = "portfolio-tomorrow-expectation-v1"
+const ExpectationPromptVersion = "portfolio-tomorrow-expectation-v2"
 
 type ExpectationRequest struct {
+	SnapshotID    string        `json:"snapshot_id,omitempty"`
 	SummaryDate   string        `json:"summary_date"`
 	TraderProfile TraderProfile `json:"trader_profile"`
 	Holdings      []Holding     `json:"holdings"`

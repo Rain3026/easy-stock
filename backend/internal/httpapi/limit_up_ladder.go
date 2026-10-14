@@ -262,7 +262,7 @@ func buildLimitUpLadder(events []foundation.LimitUpEvent, catalog []foundation.S
 	byDate := map[string][]foundation.LimitUpEvent{}
 	var fallbackMeta foundation.SourceMeta
 	for _, event := range events {
-		if event.Date.IsZero() || !foundation.IsAStockTradingDay(event.Date) {
+		if event.Date.IsZero() || !foundation.IsAStockTradingDay(event.Date) || event.Date.In(foundation.AStockLocation).Format("2006-01-02") > foundation.LatestAStockSession(now) {
 			continue
 		}
 		date := event.Date.Format("2006-01-02")

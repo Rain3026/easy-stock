@@ -53,7 +53,7 @@ func (c *Client) RecentLimitUps(ctx context.Context, lookbackDays int) ([]founda
 		lookbackDays = 12
 	}
 	location := time.FixedZone("Asia/Shanghai", 8*60*60)
-	now := time.Now().In(location)
+	now, _ := time.ParseInLocation("2006-01-02", foundation.LatestAStockSession(time.Now()), location)
 	events := make([]foundation.LimitUpEvent, 0, 200)
 	successfulDays := 0
 	var lastErr error
@@ -87,7 +87,7 @@ func (c *Client) recentLimitUps(ctx context.Context, lookbackDays int, publish f
 		lookbackDays = 12
 	}
 	location := time.FixedZone("Asia/Shanghai", 8*60*60)
-	now := time.Now().In(location)
+	now, _ := time.ParseInLocation("2006-01-02", foundation.LatestAStockSession(time.Now()), location)
 	type dayResult struct {
 		offset int
 		events []foundation.LimitUpEvent

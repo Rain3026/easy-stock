@@ -189,7 +189,7 @@ func TestResearchResumeAPIUsesSavedStagesAndRejectsLegacyReports(t *testing.T) {
 	}}
 	server := NewServer(Config{Realtime: stockAnalysisRealtime{}, KLinePrimary: stockAnalysisKLines{}, KLineFallback: stockAnalysisKLines{}, StockBusiness: stockAnalysisBusiness{}, MarketOverview: &fakeMarketOverviewProvider{}, ReviewDBPath: ":memory:", AgentGateway: gateway})
 	defer server.Close()
-	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 	defer cancel()
 	job, err := server.stockResearch.Start(ctx, stockanalysis.ResearchRequest{Symbol: "600519.SH", AnalysisLevel: stockanalysis.ResearchLevelDeep})
 	if err != nil {

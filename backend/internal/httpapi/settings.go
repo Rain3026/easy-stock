@@ -254,7 +254,7 @@ func (s *Server) settingsUpdate(w http.ResponseWriter, r *http.Request) {
 			values.ReviewAutomation.Profiles = profiles
 		}
 		modelChanged := previousModel.Provider != values.LLM.Provider || previousModel.BaseURL != values.LLM.BaseURL || previousModel.Model != values.LLM.Model || profileKeyUpdates[values.ActiveLLMProfileID] != nil || llmAPIKeyUpdate != nil
-		if (values.LLM.APIMode == "auto" || (agent.RuntimeID(values.AgentRuntime) == agent.Codex && (!agent.SupportsResponses(values.LLM) || modelChanged || agent.RuntimeID(previousRuntime) != agent.Codex))) && strings.TrimSpace(values.LLM.Model) != "" && strings.TrimSpace(values.LLM.BaseURL) != "" {
+		if agent.RuntimeID(values.AgentRuntime) != agent.WorkBuddy && (values.LLM.APIMode == "auto" || (agent.RuntimeID(values.AgentRuntime) == agent.Codex && (!agent.SupportsResponses(values.LLM) || modelChanged || agent.RuntimeID(previousRuntime) != agent.Codex))) && strings.TrimSpace(values.LLM.Model) != "" && strings.TrimSpace(values.LLM.BaseURL) != "" {
 			key := ""
 			if profileGateway, ok := s.agentGateway.(agent.ProfileGateway); ok {
 				var err error
@@ -293,7 +293,7 @@ func (s *Server) settingsUpdate(w http.ResponseWriter, r *http.Request) {
 				return err
 			}
 		} else if agent.RuntimeID(values.AgentRuntime) != agent.Hermes {
-			return fmt.Errorf("Codex 运行时不可用")
+			return fmt.Errorf("%s 运行时不可用", values.AgentRuntime)
 		}
 		return nil
 	}, func(values appsettings.Values) (func(bool) error, error) {
@@ -324,7 +324,7 @@ func (s *Server) settingsUpdate(w http.ResponseWriter, r *http.Request) {
 	})
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, agent.ErrModelProtocolUnsupported) || strings.Contains(err.Error(), "运行引擎") || strings.Contains(err.Error(), "运行时不可用") || errors.Is(err, agent.ErrProtocolUnconfirmed) {
+		if errors.Is(err, agent.ErrModelProtocolUnsupported) || errors.Is(err, agent.ErrWorkBuddyProtocolUnsupported) || strings.Contains(err.Error(), "运行引擎") || strings.Contains(err.Error(), "运行时不可用") || errors.Is(err, agent.ErrProtocolUnconfirmed) {
 			status = http.StatusBadRequest
 		}
 		writeError(w, status, "保存设置: "+err.Error())
@@ -334,7 +334,7 @@ func (s *Server) settingsUpdate(w http.ResponseWriter, r *http.Request) {
 }
 
 func validateSettingsUpdate(request settingsUpdateRequest) error {
-	if request.AgentRuntime != nil && *request.AgentRuntime != agent.Hermes && *request.AgentRuntime != agent.Codex {
+	if request.AgentRuntime != nil && *request.AgentRuntime != agent.Hermes && *request.AgentRuntime != agent.Codex && *request.AgentRuntime != agent.WorkBuddy {
 		return fmt.Errorf("不支持的运行引擎")
 	}
 	if request.LLMProfiles != nil {

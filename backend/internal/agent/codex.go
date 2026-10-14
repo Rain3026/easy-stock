@@ -263,7 +263,23 @@ func (r *CodexRuntime) start(ctx context.Context, options PromptOptions) (Proces
 		return nil, err
 	}
 	var sandbox *promptSandbox
-	if options.Sandbox && !options.DisableTools {
+	if options.ResearchTools != nil {
+		if !options.Sandbox || options.DisableTools {
+			cleanup()
+			return nil, errors.New("应用取证工具要求隔离且启用工具")
+		}
+		spec, e := options.ResearchTools.spec()
+		if e != nil {
+			cleanup()
+			return nil, e
+		}
+		secrets["EASY_STOCK_DATA_TOOL_SPEC"] = spec
+		content += fmt.Sprintf("\n[mcp_servers.easy_stock_data]\nrequired = true\ncommand = %s\nargs = %s\nenv_vars = [\"EASY_STOCK_DATA_TOOL_SPEC\"]\nstartup_timeout_sec = 20\ntool_timeout_sec = 45\ndefault_tools_approval_mode = \"auto\"\n", strconv.Quote(r.shared.pythonPath), tomlStrings([]string{"-c", mcpLauncher, "EASY_STOCK_DATA_TOOL_SPEC"}))
+		if err = writeSecureFile(filepath.Join(home, "config.toml"), []byte(content)); err != nil {
+			cleanup()
+			return nil, err
+		}
+	} else if options.Sandbox && !options.DisableTools {
 		sandbox, err = r.shared.preparePromptSandbox(options)
 		if err != nil {
 			cleanup()
@@ -461,6 +477,14 @@ func (r *CodexRuntime) PromptWithOptions(ctx context.Context, prompt string, opt
 	if err != nil {
 		return PromptResult{}, err
 	}
+	r.shared.mu.RLock()
+	model := r.shared.llm.Model
+	r.shared.mu.RUnlock()
+	return promptFromProcess(ctx, p, prompt, options, Codex, model)
+}
+
+func promptFromProcess(ctx context.Context, p Process, prompt string, options PromptOptions, runtimeID, model string) (PromptResult, error) {
+	var err error
 	defer func() { _ = p.Stop(); _ = p.Wait() }()
 	go io.Copy(io.Discard, p.Errors())
 	frames := make(chan rpcFrame, 1)
@@ -486,7 +510,7 @@ func (r *CodexRuntime) PromptWithOptions(ctx context.Context, prompt string, opt
 		_, e := p.Input().Write(append(data, '\n'))
 		return e
 	}
-	result := PromptResult{Runtime: Codex}
+	result := PromptResult{Runtime: runtimeID}
 	watchdog := newPromptWatchdog(options)
 	defer watchdog.close()
 	for {
@@ -499,7 +523,7 @@ func (r *CodexRuntime) PromptWithOptions(ctx context.Context, prompt string, opt
 			return result, watchdog.timeout()
 		case f, ok := <-frames:
 			if !ok {
-				return result, errors.New("Codex 会话意外结束")
+				return result, fmt.Errorf("%s 会话意外结束", runtimeID)
 			}
 			if f.Error != nil {
 				return result, errors.New(f.Error.Message)
@@ -518,12 +542,10 @@ func (r *CodexRuntime) PromptWithOptions(ctx context.Context, prompt string, opt
 				result.Content = eventText(f, "content")
 				result.Usage = usageFromFrame(f)
 				if result.Usage.Model == "" {
-					r.shared.mu.RLock()
-					result.Usage.Model = r.shared.llm.Model
-					r.shared.mu.RUnlock()
+					result.Usage.Model = model
 				}
 				if strings.TrimSpace(result.Content) == "" {
-					return result, errors.New("Codex 未返回有效内容")
+					return result, fmt.Errorf("%s 未返回有效内容", runtimeID)
 				}
 				return result, nil
 			case "gateway.error", "message.error":
@@ -580,6 +602,12 @@ func (p *codexProcess) Stop() error {
 }
 
 func newCodexProcess(parent context.Context, cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser, stderr io.ReadCloser, work string, options PromptOptions, cleanup func(), secret string) *codexProcess {
+	return newRuntimeProcess(parent, cmd, stdin, stdout, stderr, cleanup, secret, func(ctx context.Context, in io.Reader, out io.Writer, upstreamIn io.Writer, upstreamOut io.Reader) error {
+		return runCodexProtocol(ctx, in, out, upstreamIn, upstreamOut, work, options, secret)
+	})
+}
+
+func newRuntimeProcess(parent context.Context, cmd *exec.Cmd, stdin io.WriteCloser, stdout io.ReadCloser, stderr io.ReadCloser, cleanup func(), secret string, run func(context.Context, io.Reader, io.Writer, io.Writer, io.Reader) error) *codexProcess {
 	ctx, cancel := context.WithCancel(parent)
 	inReader, inWriter := io.Pipe()
 	outReader, outWriter := io.Pipe()
@@ -591,7 +619,7 @@ func newCodexProcess(parent context.Context, cmd *exec.Cmd, stdin io.WriteCloser
 		defer inReader.Close()
 		defer outWriter.Close()
 		defer stdin.Close()
-		err := runCodexProtocol(ctx, inReader, outWriter, stdin, stdout, work, options, secret)
+		err := run(ctx, inReader, outWriter, stdin, stdout)
 		if err != nil && ctx.Err() == nil {
 			data, _ := json.Marshal(map[string]any{"method": "gateway.error", "params": map[string]any{"message": sanitizeHermesDiagnostic(err.Error(), secret)}})
 			_, _ = outWriter.Write(append(data, '\n'))

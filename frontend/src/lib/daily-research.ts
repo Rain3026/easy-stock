@@ -1,0 +1,23 @@
+import type { BoardStock, ThemeOverview } from './backend';
+export type ResearchRole = { runtime: string; profile_id: string };
+export type ResearchSettings = { bull: ResearchRole; bear: ResearchRole; reviewer: ResearchRole; rounds: number; timeout_seconds: number; max_calls: number; keep_responses: boolean };
+export type ResearchMeta = { source: string; source_url?: string; fetched_at: string; trade_date?: string; stale: boolean; snapshot_id?: string };
+export type ResearchTheme = { overview: ThemeOverview; members: BoardStock[]; candidates: BoardStock[]; meta: ResearchMeta; error?: string };
+export type DailySnapshot = {
+ entity_id?:string;parent_id?:string;context_label?:string;context_data?:unknown;context_evidence_ids?:string[];evidence_id?:string;
+ market_pulse?: import('./daily-overview').Pulse;
+ id: string; version: string; trade_date: string; started_at: string; cutoff: string; status: string;
+ indexes: { id: string; name: string; price: number; change_percent: number; trade_time?: string; meta: ResearchMeta }[];
+ index_meta: ResearchMeta;
+ emotion?: { trade_date: string; phase: string; emotion_score: number; confidence: string; raw: { limit_up_count: number; limit_down_count: number; max_streak: number; final_break_rate: number }; source: string };
+ themes: ResearchTheme[]; gaps: string[];
+ baselines: Record<string, { time: string; close: number; meta: ResearchMeta }>;
+};
+export type Argument = { thesis: string; evidence: string[]; risks: string[]; conditions: string[]; uncertainty: string };
+export type ResearchResponse = { skill_refs?:{name:string;hash:string}[]; role: string; stage: string; runtime: string; model: string; session_id?: string; argument: Argument; raw?: string };
+export type Debate = { snapshot_id: string; subject: string; settings: ResearchSettings; responses: ResearchResponse[]; calls: number };
+export type Verification = { snapshot_id: string; checked_at: string; note: string; outcomes: { symbol: string; name: string; days: number; due_date: string; status: string; reason?: string; change_percent?: number; baseline?: { time: string; close: number }; observation?: { time: string; close: number } }[] };
+export type ResearchJob = { id: string; kind: string; snapshot_id?: string; status: string; stage: string; error?: string; started_at: string; debate?: Debate };
+export type ResearchDetail = { data: DailySnapshot; debates: Debate[]; verifications: Verification[];reviews?:{id:string;checked_at:string;generated_at:string;runtime:string;model:string;argument:Argument;skill_refs:{name:string;hash:string}[]}[] };
+export const researchRoles = [{ id: 'bull', name: '多方研究员', note: '支持证据与成立条件' }, { id: 'bear', name: '空方研究员', note: '反对证据与失效风险' }, { id: 'reviewer', name: '审校员', note: '核查分歧与证据缺口' }] as const;
+export const researchTime = (value: string) => new Date(value).toLocaleString('zh-CN', { hour12: false });

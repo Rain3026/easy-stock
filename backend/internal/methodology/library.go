@@ -219,6 +219,28 @@ func safeBuiltinCachePath(value string) (string, error) {
 	return cleaned, nil
 }
 
+// TraderForDocument resolves archive links against the cached source index.
+func (l *Library) TraderForDocument(ctx context.Context, documentID string) (TraderDetail, error) {
+	if _, err := l.Snapshot(ctx, false); err != nil {
+		return TraderDetail{}, err
+	}
+	l.mu.Lock()
+	id := ""
+	if l.cache != nil {
+		for _, item := range l.cache.Documents {
+			if item.ID == documentID {
+				id = item.TraderID
+				break
+			}
+		}
+	}
+	l.mu.Unlock()
+	if id == "" {
+		return TraderDetail{}, os.ErrNotExist
+	}
+	return l.Trader(ctx, id)
+}
+
 func (l *Library) Trader(ctx context.Context, id string) (TraderDetail, error) {
 	if _, err := l.Snapshot(ctx, false); err != nil {
 		return TraderDetail{}, err

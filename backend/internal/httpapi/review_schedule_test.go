@@ -1,3 +1,5 @@
+// Tests below exercise retained historical handlers directly. Public writes
+// are retired and covered by TestDailyResearchRetiresLegacyWrites.
 package httpapi
 
 import (
@@ -25,7 +27,11 @@ func TestReviewScheduleAPIAndNotificationRouting(t *testing.T) {
 		r := httptest.NewRequest(method, "/api/v1/reviews/daily-summary/schedule", strings.NewReader(body))
 		r.Header.Set("Authorization", "Bearer "+token)
 		w := httptest.NewRecorder()
-		s.ServeHTTP(w, r)
+		if method == "GET" {
+			s.ServeHTTP(w, r)
+		} else {
+			s.mux.ServeHTTP(w, r)
+		}
 		return w
 	}
 	if r := call("GET", "", ""); r.Code != 401 {

@@ -83,18 +83,23 @@ func main() {
 	if codexRoot == "" {
 		codexRoot = filepath.Join(filepath.Dir(resolveHermesRuntimeRoot()), "codex-runtime")
 	}
+	workbuddyHome := os.Getenv("A_STOCK_WORKBUDDY_HOME")
+	if workbuddyHome == "" {
+		workbuddyHome = filepath.Join(filepath.Dir(hermesHome), "workbuddy-home")
+	}
 	agentGateway := agent.NewService(agent.ServiceConfig{Hermes: agent.HermesConfig{
 		RuntimeRoot: resolveHermesRuntimeRoot(),
 		Home:        hermesHome,
 		WorkDir:     hermesWorkDir,
 		PythonPath:  os.Getenv("A_STOCK_HERMES_PYTHON"),
-	}, Codex: agent.CodexConfig{RuntimeRoot: codexRoot, Home: codexHome, WorkDir: filepath.Join(codexHome, "workspace")}})
+	}, WorkBuddy: agent.WorkBuddyConfig{CLIPath: os.Getenv("A_STOCK_WORKBUDDY_CLI"), NodePath: os.Getenv("A_STOCK_WORKBUDDY_NODE"), Home: workbuddyHome}, Codex: agent.CodexConfig{RuntimeRoot: codexRoot, Home: codexHome, WorkDir: filepath.Join(codexHome, "workspace")}})
 	masteryLibrary := methodology.NewLibrary(methodology.Config{
 		CacheDir:   masteryCacheDir,
 		HermesHome: hermesHome,
 	})
 	server := httpapi.NewServer(httpapi.Config{
 		Token:                os.Getenv("A_STOCK_TOKEN"),
+		DailyResearchDBPath:  filepath.Join(filepath.Dir(settingsPath), "daily-research.db"),
 		ReviewDBPath:         reviewDBPath,
 		PortfolioDBPath:      portfolioDBPath,
 		StockResearchDBPath:  stockResearchDBPath,
@@ -114,9 +119,7 @@ func main() {
 	}
 	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer cancel()
-	go server.RunReviewScheduler(ctx)
-	go server.RunDailySummaryScheduler(ctx)
-	go server.RunRemoteDailyReviewScheduler(ctx)
+	// Author review collectors and remote daily sync are retired.
 	go server.RunMarketEmotionScheduler(ctx)
 	go server.RunMasteryScheduler(ctx)
 	go server.RunPortfolioScheduler(ctx)

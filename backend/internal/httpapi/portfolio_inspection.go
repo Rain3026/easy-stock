@@ -79,7 +79,12 @@ func (s *Server) portfolioInspectionList(w http.ResponseWriter, r *http.Request)
 	if r.URL.Query().Has("portfolio_plan_id") {
 		planFilter = append(planFilter, strings.TrimSpace(r.URL.Query().Get("portfolio_plan_id")))
 	}
-	jobs, err := s.portfolioInspection.List(r.Context(), limit, planFilter...)
+	offset, e := nonNegativeQueryInt(r, "offset", 0)
+	if e != nil {
+		writeError(w, 400, "无效分页")
+		return
+	}
+	jobs, err := s.portfolioInspection.ListPage(r.Context(), limit, offset, planFilter...)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return

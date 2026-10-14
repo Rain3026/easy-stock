@@ -15,7 +15,7 @@ func TestClientParsesIndexSnapshotsAndSeries(t *testing.T) {
 			_, _ = w.Write([]byte(`{"code":0,"data":{"sh000001":{"day":[["2026-08-10","3943.82","3966.59","3967.59","3938.63","542118110"],["2026-08-11","3950.71","3934.09","3966.39","3930.64","529490944"]]}}}`))
 			return
 		}
-		_, _ = w.Write([]byte("v_s_sh000001=\"1~SSE~000001~3934.09~-32.50~-0.82~529490944~106673709~~689731.22~ZS~\";\n" +
+		_, _ = w.Write([]byte("v_sh000001=\"1~SSE~000001~3934.09~3966.59~3950.71~529490944~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~20260811150000~-32.50~-0.82~\";\n" +
 			"v_r_hkHSI=\"100~HSI~HSI~25652.820~25937.490~25998.590~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~0~2026/08/11 18:31:13~-284.670~-1.10~\";"))
 	}))
 	defer upstream.Close()
@@ -104,5 +104,21 @@ func TestClientParsesIndustryStocks(t *testing.T) {
 	}
 	if meta.Source != "tencent:industry-constituents" {
 		t.Fatalf("unexpected meta: %+v", meta)
+	}
+}
+
+func TestIndexIdentityAndOverseasTimezone(t *testing.T) {
+	a, _ := findIndex("nasdaq")
+	b, _ := findIndex("nasdaq100")
+	if a.QuoteKey != "usIXIC" || b.QuoteKey != "usNDX" {
+		t.Fatal("composite and NDX must never share identity")
+	}
+	at := parseMarketTime("2026-10-13 09:52:59", "US")
+	if at.UTC().Format("2006-01-02 15:04:05") != "2026-10-13 13:52:59" {
+		t.Fatal(at)
+	}
+	winter := parseMarketTime("2026-01-13 09:30:00", "US")
+	if winter.UTC().Hour() != 14 {
+		t.Fatal("DST must be handled", winter)
 	}
 }

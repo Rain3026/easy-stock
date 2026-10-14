@@ -76,17 +76,18 @@ type indexDefinition struct {
 }
 
 var indexCatalog = []indexDefinition{
-	{ID: "sse", QuoteKey: "s_sh000001", KLineKey: "sh000001", Code: "000001", Name: "上证指数", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
-	{ID: "szse", QuoteKey: "s_sz399001", KLineKey: "sz399001", Code: "399001", Name: "深证成指", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
-	{ID: "chinext", QuoteKey: "s_sz399006", KLineKey: "sz399006", Code: "399006", Name: "创业板指", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
-	{ID: "csi300", QuoteKey: "s_sh000300", KLineKey: "sh000300", Code: "000300", Name: "沪深300", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
-	{ID: "sse50", QuoteKey: "s_sh000016", KLineKey: "sh000016", Code: "000016", Name: "上证50", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
-	{ID: "csi1000", QuoteKey: "s_sh000852", KLineKey: "sh000852", Code: "000852", Name: "中证1000", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
-	{ID: "star50", QuoteKey: "s_sh000688", KLineKey: "sh000688", Code: "000688", Name: "科创50", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "sse", QuoteKey: "sh000001", KLineKey: "sh000001", Code: "000001", Name: "上证指数", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "szse", QuoteKey: "sz399001", KLineKey: "sz399001", Code: "399001", Name: "深证成指", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "chinext", QuoteKey: "sz399006", KLineKey: "sz399006", Code: "399006", Name: "创业板指", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "csi300", QuoteKey: "sh000300", KLineKey: "sh000300", Code: "000300", Name: "沪深300", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "sse50", QuoteKey: "sh000016", KLineKey: "sh000016", Code: "000016", Name: "上证50", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "csi1000", QuoteKey: "sh000852", KLineKey: "sh000852", Code: "000852", Name: "中证1000", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
+	{ID: "star50", QuoteKey: "sh000688", KLineKey: "sh000688", Code: "000688", Name: "科创50", Region: "中国", Market: "CN", Currency: "CNY", Core: true},
 	{ID: "hsi", QuoteKey: "r_hkHSI", KLineKey: "hkHSI", Code: "HSI", Name: "恒生指数", Region: "中国香港", Market: "HK", Currency: "HKD", Core: true},
 	{ID: "dow", QuoteKey: "usDJI", KLineKey: "usDJI", Code: ".DJI", Name: "道琼斯", Region: "美洲", Market: "US", Currency: "USD", Core: true},
 	{ID: "sp500", QuoteKey: "usINX", KLineKey: "usINX", Code: ".INX", Name: "标普500", Region: "美洲", Market: "US", Currency: "USD", Core: true},
-	{ID: "nasdaq", QuoteKey: "usIXIC", KLineKey: "usIXIC", Code: ".IXIC", Name: "纳斯达克", Region: "美洲", Market: "US", Currency: "USD", Core: true},
+	{ID: "nasdaq", QuoteKey: "usIXIC", KLineKey: "usIXIC", Code: ".IXIC", Name: "纳斯达克综合", Region: "美洲", Market: "US", Currency: "USD", Core: true},
+	{ID: "nasdaq100", QuoteKey: "usNDX", KLineKey: "usNDX", Code: ".NDX", Name: "纳斯达克100", Region: "美洲", Market: "US", Currency: "USD", Core: true},
 	{ID: "ftse", QuoteKey: "ukUKX", KLineKey: "ukUKX", Code: "UKX", Name: "英国富时100", Region: "欧洲", Market: "UK", Currency: "GBP"},
 }
 
@@ -108,7 +109,7 @@ func (c *Client) MarketIndexes(ctx context.Context, scope string) ([]foundation.
 	if err != nil {
 		return nil, foundation.SourceMeta{}, err
 	}
-	meta := foundation.SourceMeta{Source: "tencent:index", SourceURL: requestURL, FetchedAt: time.Now(), LatencyMS: time.Since(start).Milliseconds()}
+	meta := foundation.SourceMeta{Family: "tencent", Channel: "http", Source: "tencent:index", SourceURL: requestURL, FetchedAt: time.Now(), LatencyMS: time.Since(start).Milliseconds()}
 	byKey := parseTencentQuoteLines(body)
 	items := make([]foundation.MarketIndexSnapshot, 0, len(definitions))
 	for _, definition := range definitions {
@@ -116,12 +117,12 @@ func (c *Client) MarketIndexes(ctx context.Context, scope string) ([]foundation.
 		if len(fields) < 6 {
 			continue
 		}
-		tradeTime := parseTencentTradeTime(fieldAt(fields, 30))
+		tradeTime := parseMarketTime(fieldAt(fields, 30), definition.Market)
 		change, changePercent := tencentChange(fields, strings.HasPrefix(definition.QuoteKey, "s_"))
 		items = append(items, foundation.MarketIndexSnapshot{
-			ID: definition.ID, SecID: definition.QuoteKey, Code: firstString(fieldAt(fields, 2), definition.Code), Name: firstString(fieldAt(fields, 1), definition.Name),
+			ID: definition.ID, SecID: definition.QuoteKey, Code: firstString(fieldAt(fields, 2), definition.Code), Name: definition.Name,
 			Region: definition.Region, Market: definition.Market, Currency: definition.Currency, Price: parseFloat(fieldAt(fields, 3)), Change: change, ChangePercent: changePercent,
-			TradeTime: tradeTime, Status: tencentMarketStatus(definition.Market, tradeTime, time.Now()), Meta: meta,
+			TradeTime: tradeTime, Status: foundation.IndexSessionStatus(definition.Market, tradeTime, time.Now()), Meta: meta,
 		})
 	}
 	if len(items) == 0 {
@@ -298,7 +299,7 @@ func parseFloat(value string) float64 {
 
 func parseTencentTradeTime(value string) time.Time {
 	for _, layout := range []string{"2006/01/02 15:04:05", "2006-01-02 15:04:05", "20060102150405"} {
-		if parsed, err := time.ParseInLocation(layout, strings.TrimSpace(value), time.Local); err == nil {
+		if parsed, err := time.ParseInLocation(layout, strings.TrimSpace(value), foundation.AStockLocation); err == nil {
 			return parsed
 		}
 	}
@@ -319,4 +320,24 @@ func firstString(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// Tencent overseas quote timestamps are local exchange time, including US DST.
+func parseMarketTime(value, market string) time.Time {
+	zone := "Asia/Shanghai"
+	if market == "US" {
+		zone = "America/New_York"
+	} else if market == "UK" {
+		zone = "Europe/London"
+	}
+	loc, e := time.LoadLocation(zone)
+	if e != nil {
+		return time.Time{}
+	}
+	for _, layout := range []string{"2006/01/02 15:04:05", "2006-01-02 15:04:05", "20060102150405"} {
+		if at, e := time.ParseInLocation(layout, strings.TrimSpace(value), loc); e == nil {
+			return at
+		}
+	}
+	return time.Time{}
 }

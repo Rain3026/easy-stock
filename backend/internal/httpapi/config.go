@@ -8,6 +8,7 @@ import (
 
 	"easy-stock/backend/internal/agent"
 	"easy-stock/backend/internal/appsettings"
+	"easy-stock/backend/internal/datahub"
 	"easy-stock/backend/internal/foundation"
 	"easy-stock/backend/internal/marketemotion"
 	"easy-stock/backend/internal/methodology"
@@ -128,6 +129,7 @@ type ReviewImporter interface {
 }
 
 type Config struct {
+	SourceMonitor            *datahub.Monitor
 	Token                    string
 	Realtime                 RealtimeProvider
 	KLinePrimary             KLineProvider
@@ -150,6 +152,7 @@ type Config struct {
 	FuturesPosition          FuturesPositionProvider
 	MarketOverview           MarketOverviewProvider
 	Inflection               InflectionEvaluator
+	DailyResearchDBPath      string
 	ReviewDBPath             string
 	PortfolioDBPath          string
 	StockResearchDBPath      string

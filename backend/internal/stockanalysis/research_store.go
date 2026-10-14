@@ -127,7 +127,7 @@ func (s *ResearchStore) Save(ctx context.Context, job ResearchJob) error {
 		return err
 	}
 	if job.Snapshot != nil {
-		data, err := json.Marshal(job.Snapshot)
+		data, err := json.Marshal(researchFactBody(job.Snapshot))
 		if err != nil {
 			return err
 		}
@@ -138,7 +138,12 @@ func (s *ResearchStore) Save(ctx context.Context, job ResearchJob) error {
 		if err = tx.QueryRowContext(ctx, `SELECT content_json FROM stock_research_snapshots WHERE id=? AND version=?`, job.Snapshot.ID, job.Snapshot.Version).Scan(&existing); err != nil {
 			return err
 		}
-		if existing != string(data) {
+		var previous ResearchSnapshot
+		if err = json.Unmarshal([]byte(existing), &previous); err != nil {
+			return err
+		}
+		same, _ := json.Marshal(researchFactBody(&previous))
+		if string(same) != string(data) {
 			return fmt.Errorf("同一版本的研究快照不可改写")
 		}
 	}
@@ -166,11 +171,15 @@ func (s *ResearchStore) Get(ctx context.Context, id string) (ResearchJob, error)
 	return job, nil
 }
 
-func (s *ResearchStore) List(ctx context.Context, limit int) ([]ResearchJobSummary, error) {
+func (s *ResearchStore) List(ctx context.Context, limit int, offsets ...int) ([]ResearchJobSummary, error) {
 	if limit < 1 || limit > 100 {
 		limit = 30
 	}
-	rows, err := s.db.QueryContext(ctx, `SELECT content_json FROM stock_research_jobs ORDER BY updated_at DESC LIMIT ?`, limit)
+	offset := 0
+	if len(offsets) > 0 {
+		offset = max(0, offsets[0])
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT content_json FROM stock_research_jobs ORDER BY updated_at DESC,id DESC LIMIT ? OFFSET ?`, limit, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -272,4 +281,13 @@ func (s *ResearchStore) SaveVerification(ctx context.Context, id string, verific
 		return fmt.Errorf("报告不存在或尚未完成")
 	}
 	return err
+}
+
+// Execution trace grows during the task; market evidence stays immutable.
+// Older rows are compared through the same projection without rewriting them.
+func researchFactBody(v *ResearchSnapshot) ResearchSnapshot {
+	copy := *v
+	copy.SkillRefs = nil
+	copy.ToolCalls = nil
+	return copy
 }

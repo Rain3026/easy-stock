@@ -20,7 +20,7 @@ func TestMarketOverviewProvidersParsePrimarySources(t *testing.T) {
 			_, _ = w.Write([]byte(`{"rc":0,"data":{"diff":[{"f12":"BK001","f14":"半导体","f2":1234.5,"f3":2.5,"f8":3.2,"f24":8.1,"f62":320000000,"f66":120000000,"f69":3.1,"f72":200000000,"f75":5.2,"f78":-50000000,"f81":-1.2,"f84":-270000000,"f87":-7.1,"f104":51,"f105":10,"f109":5.6,"f128":"样本股份","f136":9.9,"f184":8.3}]}}`))
 		case "/api/data/v1/get":
 			if r.URL.Query().Get("reportName") == "RPTA_WEB_RZRQ_LSSH" {
-				_, _ = w.Write([]byte(`{"success":true,"message":"ok","result":{"pages":1,"data":[{"DIM_DATE":"2026-08-10 00:00:00","SCDM":"001","RZYE":100,"RQYE":10,"RZRQYE":110,"RZMRE":30,"RZCHE":20,"RZJME":10,"RQMCL":3,"RQCHL":2},{"DIM_DATE":"2026-08-10 00:00:00","SCDM":"007","RZYE":200,"RQYE":20,"RZRQYE":220,"RZMRE":50,"RZCHE":45,"RZJME":5,"RQMCL":4,"RQCHL":3},{"DIM_DATE":"2026-08-11 00:00:00","SCDM":"001","RZYE":120,"RQYE":11,"RZRQYE":131,"RZMRE":32,"RZCHE":21,"RZJME":11,"RQMCL":5,"RQCHL":2},{"DIM_DATE":"2026-08-11 00:00:00","SCDM":"007","RZYE":230,"RQYE":21,"RZRQYE":251,"RZMRE":55,"RZCHE":44,"RZJME":11,"RQMCL":6,"RQCHL":3}]}}`))
+				_, _ = w.Write([]byte(`{"success":true,"message":"ok","result":{"pages":1,"data":[{"DIM_DATE":"2026-08-07 00:00:00","SCDM":"007","RZYE":200,"RQYE":20,"RZRQYE":220,"RZMRE":50,"RZCHE":45,"RZJME":5,"RQMCL":4,"RQCHL":3},{"DIM_DATE":"2026-08-07 00:00:00","SCDM":"001","RZYE":100,"RQYE":10,"RZRQYE":110,"RZMRE":30,"RZCHE":20,"RZJME":10,"RQMCL":3,"RQCHL":2},{"DIM_DATE":"2026-08-10 00:00:00","SCDM":"001","RZYE":100,"RQYE":10,"RZRQYE":110,"RZMRE":30,"RZCHE":20,"RZJME":10,"RQMCL":3,"RQCHL":2},{"DIM_DATE":"2026-08-10 00:00:00","SCDM":"007","RZYE":200,"RQYE":20,"RZRQYE":220,"RZMRE":50,"RZCHE":45,"RZJME":5,"RQMCL":4,"RQCHL":3},{"DIM_DATE":"2026-08-11 00:00:00","SCDM":"001","RZYE":120,"RQYE":11,"RZRQYE":131,"RZMRE":32,"RZCHE":21,"RZJME":11,"RQMCL":5,"RQCHL":2},{"DIM_DATE":"2026-08-11 00:00:00","SCDM":"007","RZYE":230,"RQYE":21,"RZRQYE":251,"RZMRE":55,"RZCHE":44,"RZJME":11,"RQMCL":6,"RQCHL":3},{"DIM_DATE":"2026-08-07 00:00:00","SCDM":"002","RZYE":0,"RQYE":0,"RZRQYE":0,"RZMRE":0,"RZCHE":0,"RZJME":0,"RQMCL":0,"RQCHL":0},{"DIM_DATE":"2026-08-10 00:00:00","SCDM":"002","RZYE":0,"RQYE":0,"RZRQYE":0,"RZMRE":0,"RZCHE":0,"RZJME":0,"RQMCL":0,"RQCHL":0},{"DIM_DATE":"2026-08-11 00:00:00","SCDM":"002","RZYE":0,"RQYE":0,"RZRQYE":0,"RZMRE":0,"RZCHE":0,"RZJME":0,"RQMCL":0,"RQCHL":0}]}}`))
 			} else {
 				_, _ = w.Write([]byte(`{"success":true,"message":"ok","result":{"data":[{"SECUCODE":"600001.SH","SECURITY_NAME_ABBR":"样本股份","CLOSE_PRICE":12.3,"CHANGE_RATE":9.9,"TURNOVERRATE":16.2,"EXPLANATION":"日涨幅偏离值达7%","EXPLAIN":"买一为2家机构","BILLBOARD_BUY_AMT":50000000,"BILLBOARD_SELL_AMT":20000000,"BILLBOARD_NET_AMT":30000000,"BUY_SEAT":5,"SELL_SEAT":5}]}}`))
 			}
@@ -158,5 +158,13 @@ func TestMarketBillboardExplicitEmptyDateReturnsEmptyList(t *testing.T) {
 	items, meta, err := client.MarketBillboard(context.Background(), "2026-08-12", 10)
 	if err != nil || len(items) != 0 || meta.TradeDate != "2026-08-12" {
 		t.Fatalf("items=%+v meta=%+v err=%v", items, meta, err)
+	}
+}
+
+func TestNasdaqIdentitiesRemainDistinct(t *testing.T) {
+	a, _ := findMarketIndex("nasdaq")
+	b, ok := findMarketIndex("nasdaq100")
+	if a.SecID != "100.NDX" || ok {
+		t.Fatal(a, b)
 	}
 }

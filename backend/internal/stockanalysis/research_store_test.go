@@ -2,6 +2,8 @@ package stockanalysis
 
 import (
 	"context"
+	"easy-stock/backend/internal/agent"
+	"easy-stock/backend/internal/skillregistry"
 	"encoding/json"
 	"errors"
 	"path/filepath"
@@ -217,5 +219,33 @@ func TestResearchCompletionHandlerReceivesPersistedTerminalResult(t *testing.T) 
 			t.Fatal("duplicate task notification")
 		}
 		store.Close()
+	}
+}
+
+func TestResearchTraceCanGrowWithoutChangingFrozenFacts(t *testing.T) {
+	store, e := OpenResearchStore(":memory:")
+	if e != nil {
+		t.Fatal(e)
+	}
+	defer store.Close()
+	ctx := context.Background()
+	a, snap := researchFixture(t)
+	job := ResearchJob{ID: NewResearchID(), Status: "running", UpdatedAt: time.Now(), Analysis: &a, Snapshot: &snap}
+	if e = store.Save(ctx, job); e != nil {
+		t.Fatal(e)
+	}
+	snap.SkillRefs = []skillregistry.Reference{{Name: "method", Hash: "pinned", LoadedAt: time.Now()}}
+	snap.ToolCalls = []agent.ToolCallRecord{{ID: "read", Name: "load_skill", Status: "succeeded"}}
+	job.Status = "succeeded"
+	if e = store.Save(ctx, job); e != nil {
+		t.Fatal("trace blocked final save", e)
+	}
+	read, _ := store.Get(ctx, job.ID)
+	if read.Status != "succeeded" || len(read.Snapshot.ToolCalls) != 1 {
+		t.Fatal("trace lost")
+	}
+	snap.Limitations = append(snap.Limitations, "changed fact")
+	if store.Save(ctx, job) == nil {
+		t.Fatal("actual evidence mutation accepted")
 	}
 }

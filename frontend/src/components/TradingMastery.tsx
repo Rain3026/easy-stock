@@ -1,3 +1,4 @@
+import { ResearchNotes } from './ResearchNotes';
 import {
 	AlertTriangle,
 	BookMarked,
@@ -24,12 +25,13 @@ import {
 type Props = {
 	config: BackendConfig | null;
 	refreshKey: number;
+	documentID?: string;
 	onAskAI: (traderName: string) => void;
 };
 
 type LoadState = 'idle' | 'loading' | 'ready' | 'error';
 
-export function TradingMastery({ config, refreshKey, onAskAI }: Props) {
+export function TradingMastery({ config, refreshKey, onAskAI, documentID }: Props) {
 	const [snapshot, setSnapshot] = useState<MasterySnapshot | null>(null);
 	const [detail, setDetail] = useState<MasteryTraderDetail | null>(null);
 	const [activeTraderID, setActiveTraderID] = useState('');
@@ -71,7 +73,7 @@ export function TradingMastery({ config, refreshKey, onAskAI }: Props) {
 			.then((payload) => {
 				if (cancelled) return;
 				setDetail(payload.data);
-				setActiveDocumentID(payload.data.documents[0]?.id || '');
+				setActiveDocumentID(payload.data.documents.some(d=>d.id===documentID)?documentID!:payload.data.documents[0]?.id || '');
 				setDetailState('ready');
 			})
 			.catch((loadError) => {
@@ -81,7 +83,18 @@ export function TradingMastery({ config, refreshKey, onAskAI }: Props) {
 				setError(loadError instanceof Error ? loadError.message : '心法正文加载失败');
 			});
 		return () => { cancelled = true; };
-	}, [activeTraderID, config]);
+	}, [activeTraderID, config, documentID]);
+
+	useEffect(() => {
+		if (!config || !documentID) return;
+		let alive = true;
+		void requestJSON<{data:MasteryTraderDetail}>(config, `/api/v1/short-term/mastery/trader?document=${encodeURIComponent(documentID)}`).then(p => {
+			if (!alive) return;
+			setActiveTraderID(p.data.id);
+			setActiveDocumentID(documentID);
+		}).catch(e => { if(alive) setError(e.message) });
+		return () => { alive = false };
+	}, [config, documentID]);
 
 	const visibleTraders = useMemo(() => {
 		const keyword = query.trim().toLowerCase();
@@ -117,7 +130,7 @@ export function TradingMastery({ config, refreshKey, onAskAI }: Props) {
 			</header>
 
 			{snapshot?.knowledge_message && <div className="mastery-warning"><AlertTriangle size={15} /><span>{snapshot.knowledge_message}</span></div>}
-			{error && indexState === 'error' && <div className="mastery-error"><AlertTriangle size={19} /><strong>资料库暂时不可用</strong><span>{error}</span><button type="button" onClick={() => void loadIndex()}>重新加载</button></div>}
+			{error && (indexState === 'error' || !!documentID) && <div className="mastery-error"><AlertTriangle size={19} /><strong>资料库暂时不可用</strong><span>{error}</span><button type="button" onClick={() => void loadIndex()}>重新加载</button></div>}
 
 			<div className="mastery-layout">
 				<aside className="mastery-trader-rail">
@@ -166,7 +179,7 @@ export function TradingMastery({ config, refreshKey, onAskAI }: Props) {
 							{activeDocument && (
 								<div className="mastery-document">
 									<div className="mastery-document-note"><span>{activeDocument.kind === 'deep_report' ? '优先阅读：深度研读报告通常比学习笔记完整' : '原始学习笔记，可能包含待补充占位'}</span><a href={activeDocument.source_url} target="_blank" rel="noreferrer">原文 <ExternalLink size={12} /></a></div>
-									<MarkdownDocument content={activeDocument.content} />
+									<ResearchNotes config={config} entity={`knowledge:${activeDocument.id}`} title={activeDocument.title} sourceID={activeDocument.id} sourceURL={activeDocument.source_url} sourceText={activeDocument.content}/><MarkdownDocument content={activeDocument.content} /><p className="dr-muted">策略知识是来源观点，个人笔记不自动发布为 Skill 或交易规则。方法改进请到系统设置的 SKILL 页查看。</p>
 								</div>
 							)}
 						</>

@@ -82,7 +82,7 @@ func BuildResearchSnapshot(input Input, analysis Analysis, cutoff time.Time) Res
 	lineMeta := foundation.SourceMeta{}
 	if len(input.KLines) > 0 {
 		lineMeta = input.KLines[len(input.KLines)-1].Meta
-		if parsed, err := url.Parse(lineMeta.SourceURL); err == nil && parsed.Query().Get("fqt") == "1" {
+		if parsed, err := url.Parse(lineMeta.SourceURL); lineMeta.Adjustment == "qfq" || (err == nil && parsed.Query().Get("fqt") == "1") {
 			priceBasis = "前复权日线；跨除权时点不可直接比较原阈值"
 		}
 	}

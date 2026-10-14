@@ -142,6 +142,22 @@ func NewClient(opts ...Option) *Client {
 }
 
 func (c *Client) KLine(ctx context.Context, symbol string, period string, limit int) ([]foundation.KLine, error) {
+	return c.kLine(ctx, symbol, period, limit, "1")
+}
+
+// MarketAmountBars explicitly uses the same two all-A-share indexes as Tushare.
+// Stock normalization alone is insufficient to establish market-wide coverage.
+func (c *Client) MarketAmountBars(ctx context.Context, symbol, period string, limit int) ([]foundation.KLine, error) {
+	if symbol != "000002.SH" && symbol != "399107.SZ" {
+		return nil, fmt.Errorf("unsupported market amount universe")
+	}
+	if (period != "day" && period != "5") || limit < 1 || limit > 250 {
+		return nil, fmt.Errorf("invalid market amount period or limit")
+	}
+	return c.kLine(ctx, symbol, period, limit, "0")
+}
+
+func (c *Client) kLine(ctx context.Context, symbol string, period string, limit int, adjustment string) ([]foundation.KLine, error) {
 	normalized, err := foundation.NormalizeSymbol(symbol)
 	if err != nil {
 		return nil, err
@@ -160,7 +176,7 @@ func (c *Client) KLine(ctx context.Context, symbol string, period string, limit 
 	params.Set("fields1", "f1,f2,f3,f4,f5,f6")
 	params.Set("fields2", "f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61")
 	params.Set("klt", klt)
-	params.Set("fqt", "1")
+	params.Set("fqt", adjustment)
 	params.Set("end", "20500101")
 	params.Set("lmt", strconv.Itoa(limit))
 	params.Set("_", strconv.FormatInt(time.Now().UnixMilli(), 10))
@@ -170,6 +186,7 @@ func (c *Client) KLine(ctx context.Context, symbol string, period string, limit 
 	var payload struct {
 		RC   int `json:"rc"`
 		Data struct {
+			Code   string   `json:"code"`
 			KLines []string `json:"klines"`
 		} `json:"data"`
 	}
@@ -179,12 +196,20 @@ func (c *Client) KLine(ctx context.Context, symbol string, period string, limit 
 	if payload.RC != 0 {
 		return nil, fmt.Errorf("eastmoney rc=%d", payload.RC)
 	}
+	if payload.Data.Code != "" && payload.Data.Code != strings.Split(normalized.Canonical, ".")[0] {
+		return nil, fmt.Errorf("eastmoney returned a different security")
+	}
 
 	meta := foundation.SourceMeta{
+		Family: "eastmoney", Channel: "http", AmountUnit: "CNY", VolumeUnit: "lots",
 		Source:    "eastmoney",
 		SourceURL: requestURL,
 		FetchedAt: time.Now(),
 		LatencyMS: time.Since(start).Milliseconds(),
+	}
+	meta.Adjustment = "qfq"
+	if adjustment == "0" {
+		meta.Adjustment = "none"
 	}
 	items := make([]foundation.KLine, 0, len(payload.Data.KLines))
 	for _, raw := range payload.Data.KLines {

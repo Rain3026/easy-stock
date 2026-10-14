@@ -19,7 +19,7 @@ func TestProgressiveHistoryPublishesRecentDayBeforeSlowHistory(t *testing.T) {
 	// on which localhost request the scheduler happens to run first.
 	const lookback = 16
 	var calls, active, peak atomic.Int32
-	now := time.Now().In(time.FixedZone("Asia/Shanghai", 8*60*60))
+	now, _ := time.ParseInLocation("2006-01-02", foundation.LatestAStockSession(time.Now()), foundation.AStockLocation)
 	latest := now
 	for !foundation.IsAStockTradingDay(latest) {
 		latest = latest.AddDate(0, 0, -1)

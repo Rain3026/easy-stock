@@ -62,9 +62,23 @@ func (s *ExpectationService) Start(ctx context.Context, request ExpectationReque
 	if s == nil || s.store == nil || s.reviews == nil || s.analyze == nil {
 		return ExpectationJob{}, errors.New("持仓明日预期服务不可用")
 	}
-	summary, err := s.reviews.GetDailySummary(ctx, request.SummaryDate)
+	var summary review.DailySummary
+	if request.SnapshotID != "" {
+		source, ok := s.reviews.(interface {
+			GetResearchSummary(context.Context, string) (review.DailySummary, error)
+		})
+		if !ok {
+			return ExpectationJob{}, errors.New("研究快照服务不可用")
+		}
+		summary, err = source.GetResearchSummary(ctx, request.SnapshotID)
+		if err == nil && summary.TradeDate != request.SummaryDate {
+			return ExpectationJob{}, errors.New("快照与研究日期不匹配")
+		}
+	} else {
+		summary, err = s.reviews.GetDailySummary(ctx, request.SummaryDate)
+	}
 	if errors.Is(err, sql.ErrNoRows) {
-		return ExpectationJob{}, errors.New("未找到对应日期的大V综合复盘，请先完成每日复盘")
+		return ExpectationJob{}, errors.New("未找到对应日期的每日研究，请先生成研究快照")
 	}
 	if err != nil {
 		return ExpectationJob{}, fmt.Errorf("读取每日复盘失败: %w", err)

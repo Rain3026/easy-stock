@@ -121,15 +121,16 @@ type MarketBillboardItem struct {
 }
 
 type MarketBillboardSeat struct {
-	Direction   string  `json:"direction"`
-	Rank        int     `json:"rank"`
-	Name        string  `json:"name"`
-	BuyAmount   float64 `json:"buy_amount"`
-	BuyRatio    float64 `json:"buy_ratio"`
-	SellAmount  float64 `json:"sell_amount"`
-	SellRatio   float64 `json:"sell_ratio"`
-	NetAmount   float64 `json:"net_amount"`
-	Institution bool    `json:"institution"`
+	AvailableFields []string `json:"available_fields,omitempty"`
+	Direction       string   `json:"direction"`
+	Rank            int      `json:"rank"`
+	Name            string   `json:"name"`
+	BuyAmount       float64  `json:"buy_amount"`
+	BuyRatio        float64  `json:"buy_ratio"`
+	SellAmount      float64  `json:"sell_amount"`
+	SellRatio       float64  `json:"sell_ratio"`
+	NetAmount       float64  `json:"net_amount"`
+	Institution     bool     `json:"institution"`
 	// Source labels are optional enrichment from a third-party provider such as
 	// 同花顺. They describe that provider's classification, not an official
 	// identity confirmation.

@@ -254,7 +254,7 @@ func TestCodexNativeSharedSkillsAndMCP(t *testing.T) {
 	if bin == "" || python == "" {
 		t.Skip("native Codex and packaged Python required")
 	}
-	for _, transport := range []string{"stdio", "sse", "builtin"} {
+	for _, transport := range []string{"stdio", "sse", "builtin", "app_data"} {
 		t.Run(transport, func(t *testing.T) {
 			var requests []map[string]any
 			var mu sync.Mutex
@@ -307,6 +307,10 @@ func TestCodexNativeSharedSkillsAndMCP(t *testing.T) {
 				requests = append(requests, frame)
 				count := len(requests)
 				mu.Unlock()
+				if transport == "app_data" && count == 1 {
+					nativeReply(w, []any{map[string]any{"type": "function_call", "id": "fc_1", "call_id": "call_1", "namespace": "mcp__easy_stock_data", "name": "get_quote", "arguments": `{}`}})
+					return
+				}
 				if transport == "builtin" && count == 1 {
 					nativeReply(w, []any{map[string]any{"type": "function_call", "id": "fc_1", "call_id": "call_1", "namespace": "mcp__easy_stock_research", "name": "execute_code", "arguments": `{"code":"print(2 + 2)"}`}})
 					return
@@ -352,6 +356,17 @@ for line in sys.stdin:
 			ctx, cancel := context.WithTimeout(context.Background(), 45*time.Second)
 			defer cancel()
 			options := PromptOptions{}
+			var taskSession *ToolSession
+			if transport == "app_data" {
+				taskSession, err = NewToolSession(ctx, []ToolDefinition{{Name: "get_quote", Description: "local quote", Schema: map[string]any{"type": "object", "properties": map[string]any{}}}}, 2, func(context.Context, string, json.RawMessage) (ToolResult, error) {
+					return ToolResult{Data: map[string]any{"price": 12}, EvidenceID: "fixture-evidence"}, nil
+				})
+				if err != nil {
+					t.Fatal(err)
+				}
+				defer taskSession.Close()
+				options = PromptOptions{Sandbox: true, AutoApprove: true, ResearchTools: taskSession.Endpoint}
+			}
 			if transport == "builtin" {
 				options = PromptOptions{Sandbox: true, AutoApprove: true}
 			}
@@ -368,7 +383,7 @@ for line in sys.stdin:
 				t.Fatal("no Responses request")
 			}
 			body, _ := json.Marshal(requests[0])
-			if transport != "builtin" && !strings.Contains(string(body), "NATIVE_SKILL_DISCOVERY_MARKER") {
+			if transport != "builtin" && transport != "app_data" && !strings.Contains(string(body), "NATIVE_SKILL_DISCOVERY_MARKER") {
 				t.Fatal("shared Skill was not discovered by native Codex")
 			}
 			if transport == "stdio" {
@@ -395,6 +410,20 @@ for line in sys.stdin:
 			}
 			if transport == "builtin" && !strings.Contains(string(body), "execute_code") {
 				t.Fatalf("background research tools missing: %.1800s", string(body))
+			}
+			if transport == "app_data" {
+				calls := taskSession.Calls()
+				if len(calls) != 1 || calls[0].EvidenceID != "fixture-evidence" {
+					last, _ := json.Marshal(requests[len(requests)-1]["input"])
+					t.Fatalf("native app tool not executed %v; last input: %s", calls, last)
+				}
+				last, _ := json.Marshal(requests[len(requests)-1]["input"])
+				if !strings.Contains(string(last), "fixture-evidence") {
+					t.Fatal("evidence not returned to model")
+				}
+				if strings.Contains(string(body), taskSession.Endpoint.Token) {
+					t.Fatal("task credential leaked to model")
+				}
 			}
 			if strings.Contains(string(body), "server-secret") || strings.Contains(string(body), key) {
 				t.Fatal("credentials reached model prompt")

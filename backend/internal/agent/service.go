@@ -3,6 +3,7 @@ package agent
 import (
 	"context"
 	"crypto/sha256"
+	"easy-stock/backend/internal/skillregistry"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
@@ -16,6 +17,7 @@ import (
 
 const Hermes = "hermes"
 const Codex = "codex"
+const WorkBuddy = "workbuddy"
 
 var ErrModelProtocolUnsupported = errors.New("MODEL_PROTOCOL_UNSUPPORTED: 当前模型连接不支持 Responses，无法使用 Codex Runtime；请选择支持 Responses 的模型连接或使用 Hermes")
 
@@ -35,22 +37,26 @@ func SupportsResponses(cfg appsettings.LLM) bool {
 // Its config, secrets and skills are application-owned shared inputs, never a
 // second set of user-editable runtime settings.
 type Service struct {
-	mu sync.RWMutex
+	skillResolver func(context.Context, skillregistry.Bundle) (skillregistry.Bundle, error)
+	mu            sync.RWMutex
 	*HermesRuntime
 	codex      *CodexRuntime
+	workbuddy  *WorkBuddyRuntime
 	active     string
 	startupErr error
 }
 
 type ServiceConfig struct {
-	Hermes HermesConfig
-	Codex  CodexConfig
+	Hermes    HermesConfig
+	Codex     CodexConfig
+	WorkBuddy WorkBuddyConfig
 }
 
 func NewService(cfg ServiceConfig) *Service {
 	h := NewHermesRuntime(cfg.Hermes)
 	s := &Service{HermesRuntime: h, active: Hermes}
 	s.codex = NewCodexRuntime(cfg.Codex, h)
+	s.workbuddy = NewWorkBuddyRuntime(cfg.WorkBuddy, h)
 	return s
 }
 
@@ -62,13 +68,16 @@ func (s *Service) ActiveRuntime() string {
 
 func (s *Service) SelectRuntime(id string) error {
 	id = RuntimeID(id)
-	if id != Hermes && id != Codex {
+	if id != Hermes && id != Codex && id != WorkBuddy {
 		return fmt.Errorf("不支持的运行引擎: %s", id)
 	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if id == Codex {
+	if id == Codex || id == WorkBuddy {
 		status := s.codex.Status()
+		if id == WorkBuddy {
+			status = s.workbuddy.Status()
+		}
 		if !status.Available || !status.Configured {
 			return errors.New(status.Message)
 		}
@@ -110,6 +119,9 @@ func (s *Service) activeStatus() Status {
 	if s.active == Codex {
 		return s.codex.Status()
 	}
+	if s.active == WorkBuddy {
+		return s.workbuddy.Status()
+	}
 	if s.active != Hermes {
 		return Status{Runtime: s.active, Message: "不支持的运行引擎"}
 	}
@@ -119,11 +131,19 @@ func (s *Service) activeStatus() Status {
 func (s *Service) RuntimeStatuses() map[string]Status {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	return map[string]Status{Hermes: s.HermesRuntime.Status(), Codex: s.codex.Status()}
+	return map[string]Status{Hermes: s.HermesRuntime.Status(), Codex: s.codex.Status(), WorkBuddy: s.workbuddy.Status()}
 }
 
 func (s *Service) ValidateSelection(id string, cfg appsettings.LLM) error {
-	if RuntimeID(id) != Hermes && RuntimeID(id) != Codex {
+	if RuntimeID(id) == WorkBuddy {
+		if err := validateWorkBuddyModel(cfg); err != nil {
+			return err
+		}
+		if status := s.workbuddy.Status(); !status.Available {
+			return fmt.Errorf("WorkBuddy 运行时不可用：%s", status.Message)
+		}
+	}
+	if RuntimeID(id) != Hermes && RuntimeID(id) != Codex && RuntimeID(id) != WorkBuddy {
 		return errors.New("不支持的运行引擎")
 	}
 	if RuntimeID(id) == Codex {
@@ -203,6 +223,9 @@ func (s *Service) StartWithRevision(ctx context.Context, expected string) (Proce
 	if s.active == Codex {
 		return s.codex.Start(ctx)
 	}
+	if s.active == WorkBuddy {
+		return s.workbuddy.Start(ctx)
+	}
 	if s.active != Hermes {
 		return nil, errors.New("不支持的运行引擎")
 	}
@@ -223,13 +246,14 @@ func (s *Service) PromptWithOptionsAndBrowserState(ctx context.Context, prompt, 
 }
 
 type taskBinding struct {
-	owner    *Service
-	runtime  string
-	hermes   *HermesRuntime
-	codex    *CodexRuntime
-	identity string
-	status   Status
-	effort   string
+	owner     *Service
+	runtime   string
+	hermes    *HermesRuntime
+	codex     *CodexRuntime
+	workbuddy *WorkBuddyRuntime
+	identity  string
+	status    Status
+	effort    string
 }
 type bindingKey struct{}
 
@@ -245,7 +269,7 @@ func BindTask(ctx context.Context, p Prompter) (context.Context, func(), error) 
 }
 
 func (s *Service) BindTask(ctx context.Context) (context.Context, func(), error) {
-	if b, ok := ctx.Value(bindingKey{}).(*taskBinding); ok && b.owner == s {
+	if b, ok := ctx.Value(bindingKey{}).(*taskBinding); ok && b != nil && b.owner == s {
 		return ctx, func() {}, nil
 	}
 	s.mu.RLock()
@@ -286,8 +310,26 @@ func (s *Service) BindTask(ctx context.Context) (context.Context, func(), error)
 		return ctx, func() {}, err
 	}
 	c := NewCodexRuntime(s.codex.config, h)
-	b := &taskBinding{owner: s, runtime: s.active, hermes: h, codex: c, identity: ModelIdentity(s.active, cfg), status: s.activeStatus(), effort: storedReasoningEffort(config)}
-	return context.WithValue(ctx, bindingKey{}, b), cleanup, nil
+	b := &taskBinding{owner: s, runtime: s.active, hermes: h, codex: c, workbuddy: NewWorkBuddyRuntime(s.workbuddy.config, h), identity: ModelIdentity(s.active, cfg), status: s.activeStatus(), effort: storedReasoningEffort(config)}
+	bound := context.WithValue(ctx, bindingKey{}, b)
+	if s.skillResolver != nil {
+		bundles, e := s.SnapshotSkills(bound)
+		if e != nil {
+			cleanup()
+			return ctx, func() {}, e
+		}
+		for _, bundle := range bundles {
+			v, e := s.skillResolver(ctx, bundle)
+			if e == nil {
+				e = s.ProjectSkillBundle(bound, v)
+			}
+			if e != nil {
+				cleanup()
+				return ctx, func() {}, e
+			}
+		}
+	}
+	return bound, cleanup, nil
 }
 
 func (s *Service) PromptWithOptions(ctx context.Context, prompt string, options PromptOptions) (PromptResult, error) {
@@ -300,11 +342,54 @@ func (s *Service) PromptWithOptions(ctx context.Context, prompt string, options 
 	var result PromptResult
 	if b.runtime == Codex {
 		result, err = b.codex.PromptWithOptions(bound, prompt, options)
-	} else {
+	} else if b.runtime == WorkBuddy {
+		if options.ResearchTools != nil {
+			return PromptResult{}, errors.New("WorkBuddy 的应用取证工具协议尚未验收")
+		}
+		result, err = b.workbuddy.PromptWithOptions(bound, prompt, options)
+	} else if b.runtime == Hermes {
 		result, err = b.hermes.PromptWithOptions(bound, prompt, options)
+	}
+	if b.runtime != Hermes && b.runtime != Codex && b.runtime != WorkBuddy {
+		err = errors.New("不支持的运行引擎")
 	}
 	result.Runtime, result.ModelIdentity = b.runtime, b.identity
 	return result, err
+}
+
+// BindResearchRole creates a private configuration for one research role. It
+// never changes the active runtime, active profile, or another task's binding.
+func (s *Service) BindResearchRole(ctx context.Context, runtime string, profile appsettings.LLMProfile) (context.Context, func(), error) {
+	bound, cleanup, err := s.BindTask(context.WithValue(ctx, bindingKey{}, (*taskBinding)(nil)))
+	if err != nil {
+		return ctx, cleanup, err
+	}
+	b := bound.Value(bindingKey{}).(*taskBinding)
+	if runtime != "" {
+		b.runtime = runtime
+	}
+	if profile.ID != "" {
+		cfg := appsettings.LLM{Provider: profile.Provider, BaseURL: profile.BaseURL, Model: profile.Model, APIMode: profile.APIMode}
+		if err = b.hermes.SyncLLMProfile(cfg, profile.ID, nil); err != nil {
+			cleanup()
+			return ctx, func() {}, err
+		}
+		b.identity = ModelIdentity(b.runtime, cfg)
+	} else {
+		b.identity = ModelIdentity(b.runtime, b.hermes.llm)
+	}
+	switch b.runtime {
+	case Hermes:
+		b.status = b.hermes.Status()
+	case Codex:
+		b.status = b.codex.Status()
+	case WorkBuddy:
+		b.status = b.workbuddy.Status()
+	default:
+		cleanup()
+		return ctx, func() {}, errors.New("不支持的研究运行引擎")
+	}
+	return bound, cleanup, nil
 }
 
 func ModelIdentity(runtime string, cfg appsettings.LLM) string {

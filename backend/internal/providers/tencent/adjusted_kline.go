@@ -32,7 +32,7 @@ func (c *Client) AdjustedKLine(ctx context.Context, symbol string, limit int) ([
 	if payload.Code != 0 || len(rows) == 0 {
 		return nil, fmt.Errorf("tencent adjusted history unavailable")
 	}
-	meta := foundation.SourceMeta{Source: "tencent:qfq-kline", SourceURL: requestURL, FetchedAt: time.Now()}
+	meta := foundation.SourceMeta{Family: "tencent", Channel: "http", Adjustment: "qfq", VolumeUnit: "lots", Source: "tencent:qfq-kline", SourceURL: requestURL, FetchedAt: time.Now(), AvailableFields: []string{"open", "high", "low", "close", "volume"}}
 	lines := make([]foundation.KLine, 0, len(rows))
 	for _, row := range rows {
 		if len(row) < 6 {

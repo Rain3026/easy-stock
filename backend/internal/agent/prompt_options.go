@@ -29,6 +29,7 @@ var allowedSandboxToolsets = map[string]bool{
 // is intentionally coupled to Sandbox so callers cannot bypass consent while
 // the agent still has access to the normal application workspace.
 type PromptOptions struct {
+	ResearchTools    *ToolEndpoint
 	Sandbox          bool
 	AutoApprove      bool
 	DisableTools     bool
@@ -125,6 +126,16 @@ func (r *HermesRuntime) preparePromptSandbox(options PromptOptions) (*promptSand
 		return fail(err)
 	}
 	sandboxConfig := minimalSandboxConfig(baseConfig, workDir)
+	if options.ResearchTools != nil {
+		if !options.Sandbox || options.DisableTools {
+			return fail(errors.New("应用取证工具要求隔离且启用工具"))
+		}
+		spec, e := options.ResearchTools.spec()
+		if e != nil {
+			return fail(e)
+		}
+		sandboxConfig["mcp_servers"] = map[string]any{"easy_stock_data": map[string]any{"enabled": true, "command": r.pythonPath, "args": []string{"-c", mcpLauncher, "EASY_STOCK_DATA_TOOL_SPEC"}, "env": map[string]string{"EASY_STOCK_DATA_TOOL_SPEC": spec}, "timeout": 45, "connect_timeout": 15}}
+	}
 	if options.ReasoningEffortCap != "" {
 		capability := r.reasoningCapability(reasoningLLM(baseConfig))
 		r.applyReasoning(sandboxConfig, reasoningLLM(baseConfig), cappedReasoningEffort(storedReasoningEffort(baseConfig), options.ReasoningEffortCap, capability))
@@ -155,6 +166,9 @@ func (r *HermesRuntime) preparePromptSandbox(options PromptOptions) (*promptSand
 		toolsets = []string{"context_engine"}
 	} else if len(toolsets) == 0 {
 		toolsets = append([]string(nil), defaultSandboxToolsets...)
+	}
+	if options.ResearchTools != nil {
+		toolsets = []string{"easy_stock_data"}
 	}
 	sandbox.process = promptProcessOptions{
 		workDir: workDir,
