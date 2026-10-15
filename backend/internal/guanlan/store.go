@@ -168,6 +168,7 @@ func (s *Store) CreateDraft(ctx context.Context, req CreateRequest) (Draft, erro
 				}
 				if !req.CopyParams {
 					i.Params = Clone(def.Params)
+					i.RefreshSeconds = def.RefreshSeconds
 				}
 				if !req.CopyStyle {
 					i.Style = def.Style

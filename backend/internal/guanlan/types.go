@@ -12,29 +12,34 @@ type Layout struct {
 	H float64 `json:"h"`
 }
 type Style struct {
-	Title        string `json:"title"`
-	TitleSize    int    `json:"title_size"`
-	ValueSize    int    `json:"value_size"`
-	TextSize     int    `json:"text_size"`
-	HeaderHeight int    `json:"header_height"`
-	ChartHeight  int    `json:"chart_height"`
-	Padding      int    `json:"padding"`
-	Gap          int    `json:"gap"`
-	Columns      int    `json:"columns"`
-	Density      string `json:"density"`
-	Align        string `json:"align"`
-	RowHeight    int    `json:"row_height"`
-	RowCount     int    `json:"row_count,omitempty"`
-	ColumnWidth  int    `json:"column_width"`
-	LockRatio    bool   `json:"lock_ratio"`
+	Title        string  `json:"title"`
+	TitleSize    int     `json:"title_size"`
+	ValueSize    int     `json:"value_size"`
+	TextSize     int     `json:"text_size"`
+	HeaderHeight int     `json:"header_height"`
+	ChartHeight  int     `json:"chart_height"`
+	Padding      int     `json:"padding"`
+	Gap          int     `json:"gap"`
+	Columns      int     `json:"columns"`
+	Density      string  `json:"density"`
+	Align        string  `json:"align"`
+	RowHeight    int     `json:"row_height"`
+	RowCount     int     `json:"row_count,omitempty"`
+	ColumnWidth  int     `json:"column_width"`
+	LockRatio    bool    `json:"lock_ratio"`
+	ScaleContent bool    `json:"scale_content,omitempty"`
+	ScaleBaseW   float64 `json:"scale_base_w,omitempty"`
+	ScaleBaseH   float64 `json:"scale_base_h,omitempty"`
+	ShowSource   *bool   `json:"show_source,omitempty"`
 }
 type Instance struct {
-	ID     string         `json:"id"`
-	Type   string         `json:"type"`
-	Schema int            `json:"schema"`
-	Layout Layout         `json:"layout"`
-	Style  Style          `json:"style"`
-	Params map[string]any `json:"params"`
+	ID             string         `json:"id"`
+	Type           string         `json:"type"`
+	Schema         int            `json:"schema"`
+	Layout         Layout         `json:"layout"`
+	Style          Style          `json:"style"`
+	Params         map[string]any `json:"params"`
+	RefreshSeconds *int           `json:"refresh_seconds,omitempty"`
 }
 type Config struct {
 	Schema int        `json:"schema"`

@@ -19,8 +19,8 @@ func Catalog() []Definition {
 		keys                                    []string
 	}{
 		{"volume", "沪深量能", "行情", "实际与预计成交额、前20日均额与观察线", "行情缓存 · marketpulse", 72, 34, 36, 20, map[string]any{"history_days": 20, "show_forecast": true, "show_mean": true}, []string{"history_days", "show_forecast", "show_mean", "reference_line"}},
-		{"indexes", "指数参照", "行情", "单个或多个指数，独立选择显示字段", "行情缓存 · core indexes", 120, 16, 24, 10, map[string]any{"index_ids": []string{"sse", "szse", "chinext", "csi300"}, "mode": "horizontal", "fields": []string{"price", "change", "time"}}, []string{"index_ids", "mode", "fields"}},
-		{"breadth", "市场宽度", "行情", "同口径涨跌平与市场广度", "行情缓存 · breadth", 48, 22, 28, 14, map[string]any{"fields": []string{"up", "down", "flat", "percent"}}, []string{"fields"}},
+		{"indexes", "指数参照", "行情", "单个或多个指数，独立选择显示字段", "行情缓存 · core indexes", 120, 16, 20, 10, map[string]any{"index_ids": []string{"sse", "szse", "chinext", "csi300"}, "mode": "horizontal", "fields": []string{"price", "change", "time"}}, []string{"index_ids", "mode", "fields"}},
+		{"breadth", "市场宽度", "行情", "同口径涨跌平与市场广度", "行情缓存 · breadth", 48, 22, 20, 10, map[string]any{"fields": []string{"up", "down", "flat", "percent"}}, []string{"fields"}},
 		{"emotion", "涨跌停与连板", "行情", "涨跌停家数、最高连板及梯队", "行情缓存 · emotion", 48, 24, 28, 16, map[string]any{"rows": 5}, []string{"rows"}},
 		{"themes", "核心主线", "行情", "主线热度、涨幅与持续性", "行情缓存 · themes", 60, 24, 32, 16, map[string]any{"rows": 5, "sort": "strength"}, []string{"rows", "sort"}},
 		{"debate", "多空辨析", "AI研究", "已有多空辩论结论和证据引用", "研究档案 · Agent / Skill", 48, 30, 32, 18, map[string]any{}, []string{"snapshot_id", "result_id", "subject"}},
@@ -29,7 +29,8 @@ func Catalog() []Definition {
 	}
 	result := make([]Definition, 0, len(types))
 	for _, t := range types {
-		style := Style{Title: t.name, TitleSize: 16, ValueSize: 28, TextSize: 12, HeaderHeight: 44, ChartHeight: 220, Padding: 16, Gap: 12, Density: "standard", Align: "left", RowHeight: 34, RowCount: 8, ColumnWidth: 120}
+		showSource := false
+		style := Style{ScaleContent: true, ScaleBaseW: float64(t.w), ScaleBaseH: float64(t.h), ShowSource: &showSource, Title: t.name, TitleSize: 16, ValueSize: 28, TextSize: 12, HeaderHeight: 44, ChartHeight: 220, Padding: 16, Gap: 12, Density: "standard", Align: "left", RowHeight: 34, RowCount: 8, ColumnWidth: 120}
 		if t.id == "watchlist" {
 			style.ValueSize = 16
 			style.ColumnWidth = 92
@@ -74,6 +75,18 @@ func ValidateConfig(c Config) error {
 	return nil
 }
 func ValidateInstance(i Instance) error {
+	if i.RefreshSeconds != nil && (*i.RefreshSeconds < 0 || (*i.RefreshSeconds > 0 && *i.RefreshSeconds < 60) || *i.RefreshSeconds > 86400) {
+		return errors.New("自动刷新间隔须为0（关闭）或60至86400秒")
+	}
+	for _, n := range []float64{i.Style.ScaleBaseW, i.Style.ScaleBaseH} {
+		if math.IsNaN(n) || math.IsInf(n, 0) || n < 0 || n > 100000 {
+			return errors.New("内容缩放基准无效")
+		}
+	}
+	if (i.Style.ScaleBaseW == 0) != (i.Style.ScaleBaseH == 0) {
+		return errors.New("内容缩放基准须同时提供宽高")
+	}
+
 	if i.Style.RowCount < 0 || i.Style.RowCount > 100 {
 		return errors.New("表格显示行数无效")
 	}

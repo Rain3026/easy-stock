@@ -3,8 +3,8 @@ import {requestJSON,type BackendConfig} from './backend';
 
 export type WidgetType='volume'|'indexes'|'breadth'|'emotion'|'themes'|'debate'|'risk'|'watchlist';
 export type WidgetLayout={x:number;y:number;w:number;h:number};
-export type WidgetStyle={title:string;title_size:number;value_size:number;text_size:number;header_height:number;chart_height:number;padding:number;gap:number;columns:number;density:'compact'|'standard'|'loose';align:'left'|'center'|'right';row_height:number;row_count?:number;column_width:number;lock_ratio:boolean};
-export type WidgetInstance={id:string;type:WidgetType;schema:number;layout:WidgetLayout;style:WidgetStyle;params:Record<string,unknown>};
+export type WidgetStyle={title:string;title_size:number;value_size:number;text_size:number;header_height:number;chart_height:number;padding:number;gap:number;columns:number;density:'compact'|'standard'|'loose';align:'left'|'center'|'right';row_height:number;row_count?:number;column_width:number;lock_ratio:boolean;scale_content?:boolean;scale_base_w?:number;scale_base_h?:number;show_source?:boolean};
+export type WidgetInstance={id:string;type:WidgetType;schema:number;layout:WidgetLayout;style:WidgetStyle;params:Record<string,unknown>;refresh_seconds?:number};
 export type BoardConfig={schema:number;name:string;snap:boolean;items:WidgetInstance[]};
 export type BoardDraft={id:string;revision:number;source_id:string;config:BoardConfig;created_at:string;updated_at:string};
 export type BoardVersion={id:string;number:number;name:string;source_id:string;created_at:string;hash:string;config:BoardConfig;archived:boolean;revision:number};

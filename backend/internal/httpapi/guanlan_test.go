@@ -137,3 +137,16 @@ func TestGuanlanMetadataCrossOriginPATCHPreflight(t *testing.T) {
 		t.Fatal("authorized metadata request rejected")
 	}
 }
+
+func TestGuanlanRiskEvidenceTimesUseOriginalCutoffs(t *testing.T) {
+	at := time.Date(2026, 10, 13, 7, 0, 0, 0, time.UTC)
+	job := portfolioinspection.Job{Report: &portfolioinspection.Report{GeneratedAt: at.Add(24 * time.Hour), Holdings: []portfolioinspection.HoldingResult{{Holding: portfolioinspection.Holding{Symbol: "TEST"}, ResearchCutoffAt: at}, {Holding: portfolioinspection.Holding{Symbol: "MISSING"}}}}}
+	value := summarizeRiskJob(job)
+	raw, _ := json.Marshal(value)
+	if !strings.Contains(string(raw), "TEST 证据截至") || !strings.Contains(string(raw), "2026-10-13T07:00:00Z") || !strings.Contains(string(raw), "0001-01-01T00:00:00Z") {
+		t.Fatal("original/unknown evidence timestamps lost", string(raw))
+	}
+	if job.Report.Holdings[1].ResearchCutoffAt != (time.Time{}) {
+		t.Fatal("read backfilled unknown evidence")
+	}
+}

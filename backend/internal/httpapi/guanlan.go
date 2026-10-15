@@ -210,13 +210,14 @@ func (s *Server) boardResearchResults(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	type result struct {
-		ID        string         `json:"id"`
-		UpdatedAt any            `json:"updated_at"`
-		Status    string         `json:"status"`
-		Error     string         `json:"error,omitempty"`
-		Subject   string         `json:"subject"`
-		Debate    *dr.Debate     `json:"debate"`
-		Snapshot  map[string]any `json:"snapshot"`
+		ID          string         `json:"id"`
+		UpdatedAt   any            `json:"updated_at"`
+		GeneratedAt any            `json:"generated_at,omitempty"`
+		Status      string         `json:"status"`
+		Error       string         `json:"error,omitempty"`
+		Subject     string         `json:"subject"`
+		Debate      *dr.Debate     `json:"debate"`
+		Snapshot    map[string]any `json:"snapshot"`
 	}
 	values := []result{}
 	// Keep the normal picker bounded, but explicitly resolve saved historical IDs.
@@ -283,7 +284,11 @@ func (s *Server) boardResearchResults(w http.ResponseWriter, r *http.Request) {
 			debate = &safe
 			argument.Subject = safe.Subject
 		}
-		values = append(values, result{ID: job.ID, UpdatedAt: job.UpdatedAt, Status: job.Status, Error: job.Error, Subject: argument.Subject, Debate: debate,
+		var generated any
+		if job.Status == "succeeded" && job.Debate != nil {
+			generated = job.UpdatedAt
+		}
+		values = append(values, result{GeneratedAt: generated, ID: job.ID, UpdatedAt: job.UpdatedAt, Status: job.Status, Error: job.Error, Subject: argument.Subject, Debate: debate,
 			Snapshot: map[string]any{"id": snap.ID, "version": snap.Version, "trade_date": snap.TradeDate, "cutoff": snap.Cutoff, "gaps": snap.Gaps, "evidence_id": snap.EvidenceID}})
 	}
 	boardResult(w, values, nil)
@@ -362,7 +367,18 @@ func (s *Server) boardRiskResults(w http.ResponseWriter, r *http.Request) {
 func summarizeRiskJob(job portfolioinspection.Job) map[string]any {
 	var report any
 	if r := job.Report; r != nil {
-		report = map[string]any{"id": r.ID, "generated_at": r.GeneratedAt, "prompt_version": r.PromptVersion, "algorithm_version": r.AlgorithmVersion, "model": r.Model, "conclusion": map[string]any{"risk_level": r.Conclusion.RiskLevel, "executive_summary": r.Conclusion.ExecutiveSummary, "primary_risks": r.Conclusion.PrimaryRisks, "source": r.Conclusion.Source, "data_limitations": r.Conclusion.DataLimitations}}
+		evidence := []map[string]any{}
+		for _, h := range r.Holdings {
+			at := h.ResearchCutoffAt
+			if at.IsZero() && h.Analysis != nil {
+				at = h.Analysis.ResearchReport.CutoffAt
+			}
+			evidence = append(evidence, map[string]any{"label": h.Holding.Symbol + " 证据截至", "at": at})
+			if h.CurrentQuote != nil {
+				evidence = append(evidence, map[string]any{"label": h.Holding.Symbol + " 行情", "at": h.CurrentQuote.TradeTime, "source": h.CurrentQuote.Meta.Source})
+			}
+		}
+		report = map[string]any{"evidence_times": evidence, "id": r.ID, "generated_at": r.GeneratedAt, "prompt_version": r.PromptVersion, "algorithm_version": r.AlgorithmVersion, "model": r.Model, "conclusion": map[string]any{"risk_level": r.Conclusion.RiskLevel, "executive_summary": r.Conclusion.ExecutiveSummary, "primary_risks": r.Conclusion.PrimaryRisks, "source": r.Conclusion.Source, "data_limitations": r.Conclusion.DataLimitations}}
 	}
 	value := map[string]any{"id": job.ID, "status": job.Status, "error": job.Error, "request": map[string]any{"portfolio_plan_id": job.Request.PortfolioPlanID}, "started_at": job.StartedAt, "completed_at": job.CompletedAt, "updated_at": job.UpdatedAt, "report": report}
 	if job.TotalStocks > 0 {
